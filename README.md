@@ -1,75 +1,97 @@
-# React + TypeScript + Vite
+# Inventory-Centric ERP System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A complete inventory-centric ERP system for managing purchasing, inventory tracking, sales, and financial operations. Built with React, TypeScript, Supabase, and shadcn UI.
 
-Currently, two official plugins are available:
+## 🎯 Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+### Core Modules
+- **Partner Management**: Clients, suppliers, and customers with hierarchical relationships
+- **Items & Packaging**: Catalog with packaging types and stock tracking
+- **Purchase Invoices**: Supplier purchases with repackaging support
+- **Sales Orders**: Full order lifecycle (Ordered → Shipped → Completed → Cancelled)
+- **Delivery Notes**: Create and confirm deliveries with auto-invoice generation
+- **Inventory Tracking**: Real-time stock with average cost calculation
+- **Returns**: Sales and purchase returns with inventory restoration
+- **Adjustments**: Manual corrections with mandatory reason
+- **Sales Invoices**: Auto-generated with cancellation/reversal support
+- **Reports**: Client/supplier statements, inventory, sales/purchase summaries
 
-## React Compiler
+### Business Logic
+- **Average Cost**: `(old_qty × old_cost + new_qty × new_cost) / total_qty`
+- **Pricing**: Fixed 15% markup (`item_price = item_cost × 1.15`)
+- **Repackaging**: Unit conversion during purchase (e.g., 1 box → 5 kg)
+- **Order Status**: One-way transitions only
+- **Constraints**: Prevents negative stock and overselling
+- **Soft Delete**: Uses `deleted_at` instead of hard delete
+- **Audit Logging**: Tracks all financial/inventory changes
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+### Security
+- **RBAC**: Admin, Purchase Manager, Salesman, Manager roles
+- **RLS**: Supabase Row Level Security policies
+- **JWT Auth**: Secure session management
 
-Note: This will impact Vite dev & build performances.
+### Notifications
+- **WhatsApp**: Auto-notify suppliers on purchase invoice via Twilio
+- **Non-blocking**: Failures don't block operations
+- **Logging**: All attempts tracked in `notification_log`
 
-## Expanding the ESLint configuration
+## 🚀 Tech Stack
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 19 + TypeScript + Vite
+- shadcn UI + Tailwind CSS 4.2
+- Supabase (PostgreSQL + Auth + Edge Functions)
+- Recharts, Lucide React, React Router DOM 7
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 📦 Setup
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+```bash
+# Install
+npm install
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Configure .env
+cp .env.example .env
+# Edit: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+
+# Setup Supabase
+supabase link --project-ref <your-project-id>
+supabase db push
+
+# Deploy Edge Function (optional)
+supabase functions deploy send-whatsapp
+
+# Run
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Visit `http://localhost:5173`
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📊 Schema
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+16 tables: partner, packaging, inventory_item, purchase_invoice, sales_order, delivery_note, sales_invoice, inventory, return, adjustment, audit_log, notification_log
+
+See `supabase/migrations/001_initial_schema.sql`
+
+## 🔧 Configuration
+
+- **Pricing**: Edit `src/lib/utils.ts → calcItemPrice()`
+- **WhatsApp**: Edit `src/lib/whatsapp.ts → formatPurchaseInvoiceMessage()`
+
+## 📖 Usage
+
+1. Create packaging, items, partners
+2. Purchase invoice → auto-updates inventory
+3. Sales order → validates stock
+4. Delivery → generates invoice, updates balances
+5. View reports
+
+## 🐛 Troubleshooting
+
+- **Login fails**: Check user `app_metadata.role`
+- **WhatsApp**: Verify `VITE_ENABLE_WHATSAPP=true` and Twilio secrets
+- **Negative stock**: Check triggers/validation
+
+---
+
+**Built with ❤️ using React, TypeScript, and Supabase**
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)

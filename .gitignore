@@ -7,10 +7,21 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node
 node_modules
 dist
 dist-ssr
 *.local
+build/
+out/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Testing
+coverage/
 
 # Editor directories and files
 .vscode/*
@@ -22,5 +33,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI Tools Cache
+.qodo/
+.agent/
 
 my-project

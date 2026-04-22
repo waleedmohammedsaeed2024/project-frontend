@@ -1,0 +1,71 @@
+# 📜 Spec-Kit Constitution
+
+Follow these rules for all code generation and modifications in this project.
+
+### 1. Core Framework & Build
+* React with Vite (latest stable).
+* TypeScript only.
+* Fast HMR & modular scalability.
+
+### 2. Type Safety Rules
+* Strict mode REQUIRED.
+* Usage of `any` is STRICTLY FORBIDDEN.
+* Prefer `unknown` over `any`, explicit interfaces/types, and generics.
+* All API responses, props, and state MUST be strongly typed.
+* Zod schemas MUST be the single source of truth.
+
+### 3. Mandatory Tech Stack
+* **Routing**: TanStack Router (file-based or consistent structure).
+* **Data Fetching**: TanStack Query (no direct `fetch`/`axios`).
+* **Forms**: React Hook Form + Zod.
+* **Global State**: Zustand (for UI/Client-only state; NO server state).
+* **Styling**: Tailwind CSS (utility-first, logical properties for RTL).
+* **UI Components**: shadcn/ui (reusable & composable).
+* **Tables**: TanStack Table.
+* **Charts**: React Chart.
+* **Validation**: Zod exclusively.
+* **Backend**: Supabase (Authentication, DB, Storage) via abstracted service layer.
+
+### 4. Design System (Tailwind)
+* Primary: `oklch(42.4% 0.199 265.638)`
+* Background: `oklch(98.8% 0.003 106.5)`
+* Use Tailwind config, no hardcoded colors.
+
+### 5. Typography & Localization
+* Font: **Noto Sans Arabic**.
+* Language: **Arabic (default)**.
+* Direction: **RTL (Right-to-Left)**.
+* Use logical CSS properties (`margin-inline`, etc.).
+
+### 6. Theming
+* Global Light/Dark mode via Tailwind `class` strategy.
+
+### 7. Security
+* Use `.env` with `import.meta.env`.
+* Validate `.env` with Zod.
+
+### 8. Project Structure (STRICT)
+* `src/app.tsx`
+* `src/components/`, `src/routes/`, `src/features/`, `src/shared/`
+* **Component Architecture**: 
+  `components/<component-name>/component.tsx`, `types.ts`, `hooks.ts`, `services.ts`, `index.ts`, `xxx-components/`.
+* **Route Structure**:
+  `routes/<route-name>/page.tsx`, `xxx-components/`.
+
+### 9. Code Organization
+* Feature-based architecture.
+* Separate UI, Logic (hooks), and API (services).
+
+### 10. Supabase Integration
+* Service layer only. No direct calls in components.
+
+### 11-35. Key Principles
+* ✅ Zod validation for ALL API data.
+* ✅ Query key centralization.
+* ✅ Service layer isolation.
+* ✅ Env validation.
+* ✅ No Zustand for server state.
+* ✅ Absolute imports (`@/`).
+* ✅ RTL compatibility for all components.
+* ✅ No `console.log` in production.
+* ✅ ❌ No `any`.

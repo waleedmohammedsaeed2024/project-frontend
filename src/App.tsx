@@ -1,13 +1,2 @@
-import './App.css'
-import Dashboard from './components/main/dashboard'
-
-function App() {
-
-  return (
-    <>
-      <Dashboard />
-    </>
-  )
-}
-
-export default App
+// App.tsx is no longer used — routing is handled via main.tsx + router.tsx
+export default function App() { return null }
