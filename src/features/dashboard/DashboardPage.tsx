@@ -132,7 +132,6 @@ export default function DashboardPage() {
               <thead>
                 <tr>
                   <th>الصنف</th>
-                  <th>الكود</th>
                   <th>الكمية</th>
                   <th>نقطة الطلب</th>
                   <th>متوسط التكلفة</th>
@@ -142,7 +141,6 @@ export default function DashboardPage() {
                 {lowStock.map((item) => (
                   <tr key={item.id} className="orderpoint-alert">
                     <td style={{ fontWeight: 500 }}>{item.item_name}</td>
-                    <td><code style={{ fontSize: 12 }}>{item.item_code}</code></td>
                     <td style={{ color: 'oklch(0.50 0.14 18)', fontWeight: 600 }}>{item.quantity}</td>
                     <td>{item.orderpoint}</td>
                     <td>{formatCurrency(item.avg_cost, 4)}</td>

@@ -25,7 +25,7 @@ The app needs to connect to Supabase (your database), but it's not configured ye
 2. Replace the placeholder values:
    ```env
    VITE_SUPABASE_URL=https://your-project-id.supabase.co
-   VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+   VITE_SUPABASE_ANON_KEY=your-anon-key-here
    VITE_ENABLE_WHATSAPP=false
    ```
 3. Save the file

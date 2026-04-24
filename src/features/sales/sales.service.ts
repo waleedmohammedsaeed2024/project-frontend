@@ -5,6 +5,7 @@ import type { SalesOrder, InventoryItem, OrderStatus } from '@/lib/database.type
 
 export type SalesLineInput = {
   item_id: string
+  packaging_id?: string | null
   quantity: number
 }
 
@@ -15,6 +16,16 @@ export type CreateSalesOrderInput = {
   description?: string | null
   lines: SalesLineInput[]
   items: InventoryItem[]
+}
+
+export async function fetchSalesOrderById(id: string): Promise<SalesOrder> {
+  const { data, error } = await supabase
+    .from('sales_order')
+    .select('*, client:partner!client_id(partner_name, phone_no), customer:partner!customer_id(partner_name, phone_no), items:sales_order_item(*, item:inventory_item(item_name, item_english_name), packaging:packaging(pack_eng, pack_arab))')
+    .eq('id', id)
+    .single()
+  assertNoError(error)
+  return data as unknown as SalesOrder
 }
 
 export async function fetchSalesOrders(status?: OrderStatus | ''): Promise<SalesOrder[]> {
@@ -38,8 +49,16 @@ export async function createSalesOrder(input: CreateSalesOrderInput): Promise<vo
   for (const line of validLines) {
     const item = input.items.find(i => i.id === line.item_id)
     if (!item) continue
-    if (item.quantity < line.quantity)
-      throw new Error(`المخزون غير كافٍ للصنف: ${item.item_name}`)
+
+    let sq = supabase.from('item_stock').select('quantity').eq('item_id', line.item_id)
+    sq = line.packaging_id ? sq.eq('packaging_id', line.packaging_id) : sq.is('packaging_id', null)
+    const { data: stock } = await sq.maybeSingle()
+
+    const available = stock?.quantity ?? 0
+    if (available < line.quantity) {
+      const pkgLabel = item.item_packaging?.find(ip => ip.packaging_id === line.packaging_id)?.packaging?.pack_arab ?? ''
+      throw new Error(`المخزون غير كافٍ للصنف: ${item.item_name}${pkgLabel ? ` (${pkgLabel})` : ''}`)
+    }
   }
 
   const { data: order, error: orderErr } = await supabase
@@ -62,6 +81,7 @@ export async function createSalesOrder(input: CreateSalesOrderInput): Promise<vo
       .insert({
         sales_order_id: order.id,
         item_id: line.item_id,
+        packaging_id: line.packaging_id ?? null,
         quantity: line.quantity,
         item_cost: item.avg_cost,
         item_price: calcItemPrice(item.avg_cost),

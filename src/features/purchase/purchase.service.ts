@@ -6,6 +6,7 @@ import type { PurchaseInvoice, InventoryItem, Partner } from '@/lib/database.typ
 
 export type PurchaseLineInput = {
   item_id: string
+  packaging_id?: string | null
   quantity: number
   item_cost: number
   repack_factor: number
@@ -17,23 +18,60 @@ export type CreatePurchaseInvoiceInput = {
   supplier_inv_no?: string | null
   invoice_date: string
   lines: PurchaseLineInput[]
-  invoiceCount: number
   items: InventoryItem[]
   supplier: Partner
+}
+
+export async function fetchPurchaseInvoiceById(id: string): Promise<PurchaseInvoice> {
+  const { data, error } = await supabase
+    .from('purchase_invoice')
+    .select('*, supplier:partner!supplier_id(partner_name, phone_no), items:purchase_invoice_item(*, item:inventory_item(item_name, item_english_name), packaging:packaging!packaging_id(pack_eng, pack_arab))')
+    .eq('id', id)
+    .single()
+  assertNoError(error)
+  return data as unknown as PurchaseInvoice
 }
 
 export async function fetchPurchaseInvoices(): Promise<PurchaseInvoice[]> {
   const { data, error } = await supabase
     .from('purchase_invoice')
-    .select('*, supplier:partner!supplier_id(partner_name, phone_no)')
+    .select('*, supplier:partner!supplier_id(partner_name, phone_no), items:purchase_invoice_item(quantity, item_cost)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
   assertNoError(error)
   return data as unknown as PurchaseInvoice[]
 }
 
+async function upsertItemStock(
+  itemId: string,
+  packagingId: string | null,
+  addQty: number,
+  unitCost: number,
+): Promise<void> {
+  let q = supabase.from('item_stock').select('id, quantity, avg_cost').eq('item_id', itemId)
+  q = packagingId ? q.eq('packaging_id', packagingId) : q.is('packaging_id', null)
+  const { data: existing } = await q.maybeSingle()
+
+  if (existing) {
+    const newAvg = calcAvgCost(existing.quantity, existing.avg_cost, addQty, unitCost)
+    await supabase.from('item_stock')
+      .update({ quantity: existing.quantity + addQty, avg_cost: newAvg })
+      .eq('id', existing.id)
+  } else {
+    await supabase.from('item_stock').insert({
+      item_id: itemId,
+      packaging_id: packagingId,
+      quantity: addQty,
+      avg_cost: unitCost,
+    })
+  }
+}
+
 export async function createPurchaseInvoice(input: CreatePurchaseInvoiceInput): Promise<void> {
-  const invoice_no = `PI-${String(input.invoiceCount + 1).padStart(6, '0')}`
+  const { count } = await supabase
+    .from('purchase_invoice')
+    .select('*', { count: 'exact', head: true })
+  const invoice_no = `PI-${String((count ?? 0) + 1).padStart(6, '0')}`
 
   const { data: inv, error: invErr } = await supabase
     .from('purchase_invoice')
@@ -65,6 +103,7 @@ export async function createPurchaseInvoice(input: CreatePurchaseInvoiceInput): 
       .insert({
         purchase_invoice_id: inv.id,
         item_id: line.item_id,
+        packaging_id: line.packaging_id ?? null,
         quantity: line.quantity,
         item_cost: line.item_cost,
         repack_factor: rf,
@@ -72,6 +111,10 @@ export async function createPurchaseInvoice(input: CreatePurchaseInvoiceInput): 
       })
     assertNoError(lineErr)
 
+    // Per-packaging stock: use raw purchase quantity + per-package cost
+    await upsertItemStock(line.item_id, line.packaging_id ?? null, line.quantity, line.item_cost)
+
+    // Keep inventory_item aggregate in sync (uses repack-adjusted values)
     const item = input.items.find(i => i.id === line.item_id)
     if (item) {
       const newAvg = calcAvgCost(item.quantity, item.avg_cost, effectiveQty, unitCost)

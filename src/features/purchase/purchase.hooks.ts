@@ -1,11 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { fetchPurchaseInvoices, createPurchaseInvoice, type CreatePurchaseInvoiceInput } from './purchase.service'
+import { fetchPurchaseInvoices, fetchPurchaseInvoiceById, createPurchaseInvoice, type CreatePurchaseInvoiceInput } from './purchase.service'
 
 export function usePurchaseInvoices() {
   return useQuery({
     queryKey: queryKeys.purchaseInvoices(),
     queryFn: fetchPurchaseInvoices,
+  })
+}
+
+export function usePurchaseInvoiceDetail(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.purchaseInvoice(id ?? ''),
+    queryFn: () => fetchPurchaseInvoiceById(id!),
+    enabled: !!id,
   })
 }
 

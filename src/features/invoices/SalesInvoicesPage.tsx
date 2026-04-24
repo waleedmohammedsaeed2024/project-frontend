@@ -31,15 +31,17 @@ export default function SalesInvoicesPage() {
           <thead>
             <tr>
               <th>رقم الفاتورة</th><th>العميل</th><th>الزبون</th>
-              <th style={{ textAlign: 'end' }}>الإجمالي</th><th>التاريخ</th><th>الحالة</th>
+              <th style={{ textAlign: 'end' }}>الإجمالي</th>
+              <th style={{ textAlign: 'end' }}>الإجمالي + ضريبة 15%</th>
+              <th>التاريخ</th><th>الحالة</th>
               {can.cancelInvoice && <th style={{ textAlign: 'end' }}>الإجراءات</th>}
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
             ) : invoices.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد فواتير</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد فواتير</td></tr>
             ) : invoices.map(inv => {
               const so = (inv as unknown as { sales_order?: { client?: { partner_name: string }; customer?: { partner_name: string } } }).sales_order
               return (
@@ -48,6 +50,7 @@ export default function SalesInvoicesPage() {
                   <td style={{ fontWeight: 500 }}>{so?.client?.partner_name ?? '—'}</td>
                   <td style={{ fontSize: 13 }}>{so?.customer?.partner_name ?? '—'}</td>
                   <td style={{ textAlign: 'end', fontWeight: 700, color: 'var(--color-primary)' }}>{formatCurrency(inv.total_amount)}</td>
+                  <td style={{ textAlign: 'end', fontWeight: 700, color: 'oklch(0.55 0.15 145)' }}>{formatCurrency(inv.total_amount * 1.15)}</td>
                   <td style={{ fontSize: 13 }}>{formatDate(inv.invoice_date)}</td>
                   <td>
                     {inv.is_cancelled

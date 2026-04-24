@@ -40,47 +40,47 @@ export default function Sidebar() {
 
   const sections: NavSection[] = [
     {
-      label: 'Overview',
+      label: 'عام',
       items: [
-        { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
       ],
     },
     {
-      label: 'Sales',
+      label: 'المبيعات',
       items: [
-        { to: '/partners/clients', icon: Users, label: 'Clients', guard: true },
-        { to: '/partners/customers', icon: Users, label: 'Customers', guard: true },
-        { to: '/sales-orders', icon: ShoppingCart, label: 'Sales Orders' },
-        { to: '/delivery-notes', icon: Truck, label: 'Delivery', guard: can.confirmDelivery },
-        { to: '/sales-invoices', icon: ReceiptText, label: 'Sales Invoices' },
+        { to: '/partners/clients', icon: Users, label: 'الوكلاء', guard: true },
+        { to: '/partners/customers', icon: Users, label: 'العملاء', guard: true },
+        { to: '/sales-orders', icon: ShoppingCart, label: 'طلبات البيع' },
+        { to: '/delivery-notes', icon: Truck, label: 'التوصيل', guard: can.confirmDelivery },
+        { to: '/sales-invoices', icon: ReceiptText, label: 'فواتير البيع' },
       ],
     },
     {
-      label: 'Purchase',
+      label: 'المشتريات',
       items: [
-        { to: '/partners/suppliers', icon: Users, label: 'Suppliers' },
-        { to: '/purchase-invoices', icon: FileText, label: 'Purchase Invoices', guard: can.createPurchase },
-        { to: '/inventory', icon: Boxes, label: 'Inventory' },
-        { to: '/items', icon: Package, label: 'Items & Packaging', guard: can.manageItemsPackaging },
+        { to: '/partners/suppliers', icon: Users, label: 'الموردون' },
+        { to: '/purchase-invoices', icon: FileText, label: 'فواتير الشراء', guard: can.createPurchase },
+        { to: '/inventory', icon: Boxes, label: 'المخزون' },
+        { to: '/items', icon: Package, label: 'الأصناف والتعبئة', guard: can.manageItemsPackaging },
       ],
     },
     {
-      label: 'Operations',
+      label: 'العمليات',
       items: [
-        { to: '/returns', icon: ArrowLeftRight, label: 'Returns', guard: can.manageReturns },
-        { to: '/adjustments', icon: Sliders, label: 'Adjustments', guard: can.adjustInventory },
+        { to: '/returns', icon: ArrowLeftRight, label: 'المرتجعات', guard: can.manageReturns },
+        { to: '/adjustments', icon: Sliders, label: 'التسويات', guard: can.adjustInventory },
       ],
     },
     {
-      label: 'Reports',
+      label: 'التقارير',
       items: [
-        { to: '/reports', icon: BarChart2, label: 'Reports', guard: can.viewReports },
+        { to: '/reports', icon: BarChart2, label: 'التقارير', guard: can.viewReports },
       ],
     },
     {
-      label: 'Admin',
+      label: 'الإدارة',
       items: [
-        { to: '/admin/users', icon: Settings, label: 'Users', guard: can.manageUsers },
+        { to: '/admin/users', icon: Settings, label: 'المستخدمون', guard: can.manageUsers },
       ],
     },
   ]
@@ -97,12 +97,13 @@ export default function Sidebar() {
         padding: '20px 16px 16px',
         display: 'flex',
         alignItems: 'center',
+        // justifyContent: 'center',
         gap: 10,
         borderBottom: '1px solid oklch(1 0 0 / 0.08)',
         marginBottom: 8,
       }}>
         <div style={{
-          width: 34, height: 34, borderRadius: 8,
+          width: 38, height: 38, borderRadius: 8,
           background: 'var(--color-primary)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
@@ -111,14 +112,14 @@ export default function Sidebar() {
         </div>
         {!collapsed && (
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: 'white', lineHeight: 1.2 }}>InventoryERP</div>
-            <div style={{ fontSize: 11, color: 'oklch(0.65 0.02 110)', textTransform: 'capitalize' }}>{role ?? 'user'}</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'white', lineHeight: 1.2 }}>نظام المخزون</div>
+            {/* <div style={{ fontSize: 16, color: 'oklch(0.65 0.02, 240)', textTransform: 'capitalize' }}>{role ?? 'user'}</div> */}
           </div>
         )}
       </div>
 
       {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', paddingBottom: 16 }}>
+      <nav style={{ flex: 1, overflowY: 'auto', paddingBottom: 16, scrollbarWidth: 'none' }}>
         {sections.map((section) => {
           const visibleItems = section.items.filter(item => item.guard !== false)
           if (visibleItems.length === 0) return null
@@ -156,10 +157,10 @@ export default function Sidebar() {
           onClick={handleSignOut}
           className="nav-item btn-ghost"
           style={{ width: '100%', border: 'none', background: 'transparent', cursor: 'pointer' }}
-          title={collapsed ? 'Sign out' : undefined}
+          title={collapsed ? 'تسجيل الخروج' : undefined}
         >
           <LogOut size={16} style={{ flexShrink: 0 }} />
-          {!collapsed && <span>Sign Out</span>}
+          {!collapsed && <span>تسجيل الخروج</span>}
         </button>
 
         {/* Collapse toggle */}
@@ -170,10 +171,10 @@ export default function Sidebar() {
             width: '100%', border: 'none', background: 'oklch(1 0 0 / 0.06)',
             cursor: 'pointer', justifyContent: collapsed ? 'center' : 'flex-end',
           }}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'توسيع الشريط' : 'طي الشريط'}
         >
           {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
-          {!collapsed && <span style={{ fontSize: 12 }}>Collapse</span>}
+          {!collapsed && <span style={{ fontSize: 12 }}>طي</span>}
         </button>
       </div>
     </aside>

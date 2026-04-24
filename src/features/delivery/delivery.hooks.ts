@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import {
   fetchDeliveryNotes, fetchOrdersForDelivery,
-  createDeliveryNote, confirmDelivery,
+  createDeliveryNote, confirmDelivery, confirmDeliveryByOrderId,
 } from './delivery.service'
 import type { DeliveryNote } from '@/lib/database.types'
 
@@ -31,6 +31,21 @@ export function useConfirmDelivery() {
   return useMutation({
     mutationFn: (note: DeliveryNote) => confirmDelivery(note),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.deliveryNotes() })
+      qc.invalidateQueries({ queryKey: queryKeys.salesInvoices() })
+      qc.invalidateQueries({ queryKey: queryKeys.items() })
+      qc.invalidateQueries({ queryKey: queryKeys.inventory() })
+      qc.invalidateQueries({ queryKey: queryKeys.partners('c') })
+    },
+  })
+}
+
+export function useConfirmOrderDelivery() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (orderId: string) => confirmDeliveryByOrderId(orderId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['sales-orders'] })
       qc.invalidateQueries({ queryKey: queryKeys.deliveryNotes() })
       qc.invalidateQueries({ queryKey: queryKeys.salesInvoices() })
       qc.invalidateQueries({ queryKey: queryKeys.items() })

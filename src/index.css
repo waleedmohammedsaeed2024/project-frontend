@@ -20,8 +20,10 @@
   --color-accent:      oklch(0.905 0.182 98.111);
   --color-muted:       oklch(0.393 0.095 152.535);
   --color-border:      oklch(0.90 0.01 100);
-  --color-sidebar:     oklch(0.22 0.03 112);
-  --color-sidebar-fg:  oklch(0.90 0.01 100);
+  --color-sidebar:     oklch(0.55 0.02 110);
+  /* --color-sidebar:     oklch(0.22 0.03 112); */
+  --color-sidebar-fg:  oklch(0.22 0.03 110);
+  /* --color-sidebar-fg:  oklch(0.90 0.01 100); */
 
   /* Status colors */
   --color-status-ordered:   oklch(0.82 0.14 70);
@@ -52,12 +54,12 @@
 
 html {
   font-family: var(--font-sans);
-  font-size: 15px;
+  /* font-size: 18px; */
   color: var(--color-text);
   background: var(--color-bg);
   direction: rtl;
   font-weight: bold;
-  font-size: 1.2 rem;
+  font-size: 1.7 rem;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -1,12 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
-import { fetchSalesOrders, createSalesOrder, cancelSalesOrder, type CreateSalesOrderInput } from './sales.service'
+import { fetchSalesOrders, fetchSalesOrderById, createSalesOrder, cancelSalesOrder, type CreateSalesOrderInput } from './sales.service'
 import type { OrderStatus } from '@/lib/database.types'
 
 export function useSalesOrders(status?: OrderStatus | '') {
   return useQuery({
     queryKey: queryKeys.salesOrders(status),
     queryFn: () => fetchSalesOrders(status),
+  })
+}
+
+export function useSalesOrderDetail(id: string | null) {
+  return useQuery({
+    queryKey: queryKeys.salesOrder(id ?? ''),
+    queryFn: () => fetchSalesOrderById(id!),
+    enabled: !!id,
   })
 }
 

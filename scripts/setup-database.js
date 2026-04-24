@@ -1,7 +1,4 @@
-// Database Setup Script
-// Reads the migration file and applies it to Supabase
-
-import { createClient } from '@supabase/supabase-js'
+// Database Setup Script — reads credentials from .env, never hardcodes them
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
@@ -9,8 +6,34 @@ import { dirname, join } from 'path'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const supabaseUrl = 'https://avuedapgjitwnimkrjlp.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2dWVkYXBnaml0d25pbWtyamxwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkwOTM4MTgsImV4cCI6MjA4NDY2OTgxOH0.l7tm4FmA2LFO8npZdPOHO5P1TXN1ExEjHz5MnN44GSU'
+// Parse .env manually (no dotenv dependency needed)
+function loadEnv() {
+  const envPath = join(__dirname, '..', '.env')
+  try {
+    const raw = readFileSync(envPath, 'utf-8')
+    const vars = {}
+    for (const line of raw.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const [key, ...rest] = trimmed.split('=')
+      vars[key.trim()] = rest.join('=').trim()
+    }
+    return vars
+  } catch {
+    console.error('❌ Could not read .env file. Make sure it exists.')
+    process.exit(1)
+  }
+}
+
+const env = loadEnv()
+const supabaseUrl = env['VITE_SUPABASE_URL']
+
+if (!supabaseUrl) {
+  console.error('❌ VITE_SUPABASE_URL is missing from .env')
+  process.exit(1)
+}
+
+const projectRef = new URL(supabaseUrl).hostname.split('.')[0]
 
 console.log('🔧 Setting up Supabase database...')
 console.log('')
@@ -22,11 +45,11 @@ console.log('   3. Run the SQL directly in the dashboard')
 console.log('')
 console.log('   OR use Supabase CLI:')
 console.log('   1. Login: npx supabase login')
-console.log('   2. Link: npx supabase link --project-ref avuedapgjitwnimkrjlp')
-console.log('   3. Push: npx supabase db push')
+console.log(`   2. Link:  npx supabase link --project-ref ${projectRef}`)
+console.log('   3. Push:  npx supabase db push')
 console.log('')
 console.log('📄 Migration file: supabase/migrations/001_initial_schema.sql')
-console.log('🌐 Supabase Dashboard: https://supabase.com/dashboard/project/avuedapgjitwnimkrjlp')
+console.log(`🌐 Supabase Dashboard: https://supabase.com/dashboard/project/${projectRef}`)
 console.log('')
 console.log('✅ .env file is already configured with your credentials')
 console.log('✅ You can now access the app at http://localhost:5175')

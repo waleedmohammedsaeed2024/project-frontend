@@ -50,3 +50,20 @@ Items Count: ${itemsCount}
 
 System Notification`
 }
+
+/**
+ * Format sales invoice notification message (sent to client on delivery confirmation)
+ */
+export function formatSalesInvoiceMessage(
+  clientName: string,
+  invoiceNo: string,
+  totalAmount: number,
+): string {
+  return `🧾 فاتورة مبيعات
+
+العميل: ${clientName}
+رقم الفاتورة: ${invoiceNo}
+الإجمالي: ${totalAmount.toFixed(3)}
+
+تم إصدار الفاتورة تلقائياً عند تأكيد التسليم`
+}

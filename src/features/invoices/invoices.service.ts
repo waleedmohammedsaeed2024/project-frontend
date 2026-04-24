@@ -46,6 +46,17 @@ export async function cancelSalesInvoice(inv: SalesInvoice): Promise<void> {
   assertNoError(invOpErr)
 
   for (const line of orderItems ?? []) {
+    const packagingId = (line as { packaging_id?: string | null }).packaging_id ?? null
+
+    // Restore per-packaging stock
+    let sq = supabase.from('item_stock').select('id, quantity').eq('item_id', line.item_id)
+    sq = packagingId ? sq.eq('packaging_id', packagingId) : sq.is('packaging_id', null)
+    const { data: stock } = await sq.maybeSingle()
+    if (stock) {
+      await supabase.from('item_stock').update({ quantity: stock.quantity + line.quantity }).eq('id', stock.id)
+    }
+
+    // Restore inventory_item aggregate
     const { data: item } = await supabase
       .from('inventory_item')
       .select('quantity')
@@ -54,6 +65,7 @@ export async function cancelSalesInvoice(inv: SalesInvoice): Promise<void> {
     if (item) {
       await supabase.from('inventory_item').update({ quantity: item.quantity + line.quantity }).eq('id', line.item_id)
     }
+
     await supabase.from('inventory_record').insert({
       inventory_id: invOp.id,
       item_id: line.item_id,

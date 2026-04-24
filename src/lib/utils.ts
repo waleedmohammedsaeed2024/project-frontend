@@ -63,10 +63,10 @@ export function round4(value: number): number {
 
 // ---- Order status helpers ----
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  o: 'Ordered',
-  p: 'Shipped',
-  c: 'Completed',
-  d: 'Cancelled',
+  o: 'قيد التنفيذ',
+  p: 'قيد التوصيل',
+  c: 'تم التسليم',
+  d: 'ملغى',
 }
 
 export const ORDER_STATUS_CLASS: Record<OrderStatus, string> = {

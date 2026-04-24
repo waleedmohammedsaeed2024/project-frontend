@@ -2,12 +2,11 @@ import { supabase } from '@/lib/supabase'
 import { assertNoError } from '@/shared/types'
 import type { InventoryItem, Packaging } from '@/lib/database.types'
 
-const ITEM_SELECT = '*, item_packaging(packaging_id, packaging:packaging(id, pack_eng, pack_arab))'
+const ITEM_SELECT = '*, item_packaging(packaging_id, packaging:packaging(id, pack_eng, pack_arab)), stock:item_stock(id, packaging_id, quantity, avg_cost, packaging:packaging(pack_eng, pack_arab))'
 
 export type ItemInsert = {
   item_name: string
   item_english_name?: string | null
-  item_code: string
   packaging_ids?: string[]
   orderpoint?: number
   avg_cost?: number
@@ -53,10 +52,18 @@ export async function createItem(payload: ItemInsert): Promise<InventoryItem> {
     const { error: pkgErr } = await supabase
       .from('item_packaging')
       .insert(packaging_ids.map(pid => ({ item_id: item.id, packaging_id: pid })))
+      .select()
     assertNoError(pkgErr)
   }
 
-  return item
+  // Re-fetch with packaging joined so the returned object is complete
+  const { data: full, error: fetchErr } = await supabase
+    .from('inventory_item')
+    .select(ITEM_SELECT)
+    .eq('id', item.id)
+    .single()
+  assertNoError(fetchErr)
+  return full as unknown as InventoryItem
 }
 
 export async function updateItem(id: string, payload: Partial<ItemInsert>): Promise<InventoryItem> {

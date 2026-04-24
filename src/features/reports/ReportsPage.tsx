@@ -119,13 +119,12 @@ export default function ReportsPage() {
             <div className="table-wrapper">
               <table>
                 <thead>
-                  <tr><th>الصنف</th><th>الكود</th><th style={{ textAlign: 'end' }}>الكمية</th><th style={{ textAlign: 'end' }}>متوسط التكلفة</th><th style={{ textAlign: 'end' }}>القيمة الإجمالية</th></tr>
+                  <tr><th>الصنف</th><th style={{ textAlign: 'end' }}>الكمية</th><th style={{ textAlign: 'end' }}>متوسط التكلفة</th><th style={{ textAlign: 'end' }}>القيمة الإجمالية</th></tr>
                 </thead>
                 <tbody>
-                  {(results as Array<{ id: string; item_name: string; item_code: string; quantity: number; avg_cost: number }>).map(row => (
+                  {(results as Array<{ id: string; item_name: string; quantity: number; avg_cost: number }>).map(row => (
                     <tr key={row.id}>
                       <td style={{ fontWeight: 500 }}>{row.item_name}</td>
-                      <td><code style={{ fontSize: 12 }}>{row.item_code}</code></td>
                       <td style={{ textAlign: 'end' }}>{row.quantity}</td>
                       <td style={{ textAlign: 'end' }}>{formatCurrency(row.avg_cost, 4)}</td>
                       <td style={{ textAlign: 'end', fontWeight: 700, color: 'var(--color-primary)' }}>{formatCurrency(row.quantity * row.avg_cost)}</td>

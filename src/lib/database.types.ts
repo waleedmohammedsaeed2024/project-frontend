@@ -38,11 +38,21 @@ export interface ItemPackaging {
   packaging?: Packaging
 }
 
+export interface ItemStock {
+  id: string
+  item_id: string
+  packaging_id: string | null
+  quantity: number
+  avg_cost: number
+  created_at: string
+  updated_at: string
+  packaging?: Pick<Packaging, 'pack_eng' | 'pack_arab'>
+}
+
 export interface InventoryItem {
   id: string
   item_name: string
   item_english_name: string | null
-  item_code: string
   item_image: string | null
   avg_cost: number
   quantity: number
@@ -51,6 +61,7 @@ export interface InventoryItem {
   updated_at: string
   deleted_at: string | null
   item_packaging?: ItemPackaging[]
+  stock?: ItemStock[]
 }
 
 export interface PurchaseInvoice {
@@ -70,6 +81,7 @@ export interface PurchaseInvoiceItem {
   id: string
   purchase_invoice_id: string
   item_id: string
+  packaging_id: string | null
   quantity: number
   item_cost: number
   repack_factor: number
@@ -79,6 +91,7 @@ export interface PurchaseInvoiceItem {
   updated_at: string
   deleted_at: string | null
   item?: InventoryItem
+  packaging?: Pick<Packaging, 'pack_eng' | 'pack_arab'>
 }
 
 export interface SalesOrder {
@@ -101,6 +114,7 @@ export interface SalesOrderItem {
   id: string
   sales_order_id: string
   item_id: string
+  packaging_id: string | null
   quantity: number
   item_cost: number
   item_price: number
@@ -108,6 +122,7 @@ export interface SalesOrderItem {
   updated_at: string
   deleted_at: string | null
   item?: InventoryItem
+  packaging?: Pick<Packaging, 'pack_eng' | 'pack_arab'>
 }
 
 export interface DeliveryNote {

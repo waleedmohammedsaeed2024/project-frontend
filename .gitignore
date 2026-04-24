@@ -20,8 +20,18 @@ out/
 .env.*
 !.env.example
 
+# Secrets
+secrets.txt
+
 # Testing
 coverage/
+
+# TypeScript & Vite cache
+*.tsbuildinfo
+.vite/
+
+# Supabase local dev
+.supabase/
 
 # Editor directories and files
 .vscode/*
@@ -38,4 +48,5 @@ coverage/
 .qodo/
 .agent/
 
-my-project
+# Conversation logs
+conversations/
