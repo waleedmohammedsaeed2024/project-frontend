@@ -1,10 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePagination, PaginationFooter } from '@/components/Pagination'
-import { Plus, Eye, XCircle, Search, Printer, CheckCircle2, Phone, MapPin, FileText } from 'lucide-react'
+import { Plus, Eye, XCircle, Search, Printer, CheckCircle2, Phone, MapPin, FileText, Trash2, Save } from 'lucide-react'
 import { formatDate, formatCurrency, ORDER_STATUS_CLASS, ORDER_STATUS_LABEL } from '@/lib/utils'
 import { printOrderPDF } from '@/lib/printOrderPDF'
 import type { OrderStatus } from '@/lib/database.types'
-import { useSalesOrders, useCreateSalesOrder, useCancelSalesOrder, useSalesOrderDetail } from './sales.hooks'
+import {
+  useSalesOrders, useCreateSalesOrder, useCancelSalesOrder, useSalesOrderDetail,
+  useDeleteSalesOrder, useUpdateSalesOrderLineQty, useDeleteSalesOrderLine, useAddSalesOrderLine,
+} from './sales.hooks'
 import { useConfirmOrderDelivery } from '@/features/delivery/delivery.hooks'
 import { fetchSalesOrderById } from './sales.service'
 import { useItems } from '@/features/items/items.hooks'
@@ -112,6 +115,10 @@ export default function SalesOrdersPage() {
   const { data: clients = [] } = useClients()
   const createMutation = useCreateSalesOrder()
   const cancelMutation = useCancelSalesOrder()
+  const deleteOrderMutation = useDeleteSalesOrder()
+  const updateLineMutation = useUpdateSalesOrderLineQty()
+  const deleteLineMutation = useDeleteSalesOrderLine()
+  const addLineMutation = useAddSalesOrderLine()
   const confirmDeliveryMutation = useConfirmOrderDelivery()
 
   const q = search.trim().toLowerCase()
@@ -138,6 +145,47 @@ export default function SalesOrdersPage() {
   // Detail dialog
   const [viewingId, setViewingId] = useState<string | null>(null)
   const { data: detailOrder, isLoading: detailLoading } = useSalesOrderDetail(viewingId)
+
+  // Per-line qty edits while the dialog is open. Reset whenever the viewed order changes.
+  const [lineEdits, setLineEdits] = useState<Record<string, string>>({})
+  useEffect(() => { setLineEdits({}) }, [viewingId])
+
+  async function handleSaveLineQty(lineId: string) {
+    const raw = lineEdits[lineId]
+    if (raw == null) return
+    const qty = parseFloat(raw)
+    try {
+      await updateLineMutation.mutateAsync({ lineId, quantity: qty })
+      setLineEdits(m => { const n = { ...m }; delete n[lineId]; return n })
+    } catch (err) { alert(err instanceof Error ? err.message : 'حدث خطأ') }
+  }
+
+  async function handleDeleteLine(lineId: string) {
+    if (!confirm('حذف هذا الصنف من الطلب؟')) return
+    try { await deleteLineMutation.mutateAsync(lineId) }
+    catch (err) { alert(err instanceof Error ? err.message : 'حدث خطأ') }
+  }
+
+  // ── Add new line to an existing order ──────────────────────────────────────
+  const [newLine, setNewLine] = useState<{ item_id: string; packaging_id: string; quantity: string }>({
+    item_id: '', packaging_id: '', quantity: '',
+  })
+  // Reset the draft whenever the dialog target changes
+  useEffect(() => { setNewLine({ item_id: '', packaging_id: '', quantity: '' }) }, [viewingId])
+
+  async function handleAddLine() {
+    if (!viewingId || !newLine.item_id || !newLine.quantity) return
+    try {
+      await addLineMutation.mutateAsync({
+        sales_order_id: viewingId,
+        item_id: newLine.item_id,
+        packaging_id: newLine.packaging_id || null,
+        quantity: parseFloat(newLine.quantity),
+        items,
+      })
+      setNewLine({ item_id: '', packaging_id: '', quantity: '' })
+    } catch (err) { alert(err instanceof Error ? err.message : 'حدث خطأ') }
+  }
 
   // Print loading per row
   const [printingId, setPrintingId] = useState<string | null>(null)
@@ -298,6 +346,20 @@ export default function SalesOrdersPage() {
                         ><XCircle size={14} /></button>
                       )}
 
+                      {/* Remove (soft-delete) — الطلبات only */}
+                      {o.status === 'o' && (
+                        <button
+                          className="btn btn-danger btn-sm btn-icon"
+                          title="حذف الطلب"
+                          disabled={deleteOrderMutation.isPending}
+                          onClick={async () => {
+                            if (!confirm('حذف هذا الطلب نهائياً؟ لن يظهر في القائمة بعد ذلك.')) return
+                            try { await deleteOrderMutation.mutateAsync(o.id) }
+                            catch (err) { alert(err instanceof Error ? err.message : 'حدث خطأ') }
+                          }}
+                        ><Trash2 size={14} /></button>
+                      )}
+
                       {/* Print PDF — تم التسليم only */}
                       {o.status === 'c' && (
                         <button
@@ -407,33 +469,72 @@ export default function SalesOrdersPage() {
                                 <th style={{ textAlign: 'end' }}>التكلفة</th>
                                 <th style={{ textAlign: 'end' }}>السعر</th>
                                 <th style={{ textAlign: 'end' }}>الإجمالي</th>
+                                {detailOrder.status === 'o' && <th style={{ textAlign: 'end', width: 90 }}>إجراءات</th>}
                               </tr>
                             </thead>
                             <tbody>
-                              {lineItems.map((line, idx) => (
-                                <tr key={line.id ?? idx}>
-                                  <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{idx + 1}</td>
-                                  <td>
-                                    <div style={{ fontWeight: 500 }}>{line.item?.item_name ?? '—'}</div>
-                                    {line.item?.item_english_name && (
-                                      <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{line.item.item_english_name}</div>
+                              {lineItems.map((line, idx) => {
+                                const editable = detailOrder.status === 'o'
+                                const lineId = line.id ?? ''
+                                const editedRaw = lineEdits[lineId]
+                                const isEdited = editedRaw != null && editedRaw !== String(line.quantity)
+                                return (
+                                  <tr key={lineId || idx}>
+                                    <td style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{idx + 1}</td>
+                                    <td>
+                                      <div style={{ fontWeight: 500 }}>{line.item?.item_name ?? '—'}</div>
+                                      {line.item?.item_english_name && (
+                                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{line.item.item_english_name}</div>
+                                      )}
+                                    </td>
+                                    <td>
+                                      {line.packaging ? (
+                                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'oklch(0.93 0.05 240 / 0.35)', color: 'oklch(0.35 0.14 240)' }}>
+                                          {line.packaging.pack_eng}
+                                        </span>
+                                      ) : <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>—</span>}
+                                    </td>
+                                    <td style={{ textAlign: 'end' }}>
+                                      {editable ? (
+                                        <input
+                                          type="number" min="0.001" step="0.001"
+                                          className="form-input"
+                                          style={{ textAlign: 'end', maxWidth: 110, marginInlineStart: 'auto' }}
+                                          value={editedRaw ?? String(line.quantity)}
+                                          onChange={e => setLineEdits(m => ({ ...m, [lineId]: e.target.value }))}
+                                        />
+                                      ) : line.quantity}
+                                    </td>
+                                    <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(line.item_cost, 3)}</td>
+                                    <td style={{ textAlign: 'end' }}>{formatCurrency(line.item_price, 3)}</td>
+                                    <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>
+                                      {formatCurrency(line.quantity * line.item_price, 3)}
+                                    </td>
+                                    {editable && (
+                                      <td>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 4 }}>
+                                          {isEdited && (
+                                            <button
+                                              type="button"
+                                              className="btn btn-primary btn-sm btn-icon"
+                                              title="حفظ الكمية"
+                                              disabled={updateLineMutation.isPending}
+                                              onClick={() => handleSaveLineQty(lineId)}
+                                            ><Save size={14} /></button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            className="btn btn-danger btn-sm btn-icon"
+                                            title="حذف الصنف"
+                                            disabled={deleteLineMutation.isPending || lineItems.length === 1}
+                                            onClick={() => handleDeleteLine(lineId)}
+                                          ><Trash2 size={14} /></button>
+                                        </div>
+                                      </td>
                                     )}
-                                  </td>
-                                  <td>
-                                    {line.packaging ? (
-                                      <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'oklch(0.93 0.05 240 / 0.35)', color: 'oklch(0.35 0.14 240)' }}>
-                                        {line.packaging.pack_eng}
-                                      </span>
-                                    ) : <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>—</span>}
-                                  </td>
-                                  <td style={{ textAlign: 'end' }}>{line.quantity}</td>
-                                  <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(line.item_cost, 3)}</td>
-                                  <td style={{ textAlign: 'end' }}>{formatCurrency(line.item_price, 3)}</td>
-                                  <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>
-                                    {formatCurrency(line.quantity * line.item_price, 3)}
-                                  </td>
-                                </tr>
-                              ))}
+                                  </tr>
+                                )
+                              })}
                             </tbody>
                             <tfoot>
                               <tr>
@@ -441,11 +542,64 @@ export default function SalesOrdersPage() {
                                 <td style={{ textAlign: 'end', fontWeight: 700, fontSize: 15, color: 'var(--color-primary)' }}>
                                   {formatCurrency(grandTotal, 3)}
                                 </td>
+                                {detailOrder.status === 'o' && <td />}
                               </tr>
                             </tfoot>
                           </table>
                         </div>
                       )}
+
+                      {detailOrder.status === 'o' && (() => {
+                        const draftItem = items.find(it => it.id === newLine.item_id)
+                        const availablePkg = draftItem?.item_packaging ?? []
+                        return (
+                          <div style={{
+                            marginTop: 12, padding: '12px 14px',
+                            border: '1px dashed var(--color-border)',
+                            borderRadius: 'var(--radius-md)',
+                            background: 'oklch(0.97 0.01 240 / 0.4)',
+                          }}>
+                            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', marginBottom: 8 }}>إضافة صنف جديد</div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2.5fr 1.5fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                              <ItemSearch
+                                items={items}
+                                value={newLine.item_id}
+                                onSelect={id => setNewLine(d => ({ ...d, item_id: id, packaging_id: '' }))}
+                              />
+                              <select
+                                className="form-select"
+                                value={newLine.packaging_id}
+                                disabled={!newLine.item_id}
+                                onChange={e => setNewLine(d => ({ ...d, packaging_id: e.target.value }))}
+                                style={{ opacity: newLine.item_id ? 1 : 0.5, fontSize: 13 }}
+                              >
+                                <option value="">
+                                  {!newLine.item_id ? '— الصنف أولاً —'
+                                    : availablePkg.length === 0 ? '— لا تعبئة —'
+                                    : '— التعبئة —'}
+                                </option>
+                                {availablePkg.map(ip => (
+                                  <option key={ip.packaging_id} value={ip.packaging_id}>
+                                    {ip.packaging?.pack_eng} / {ip.packaging?.pack_arab}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                type="number" min="0.001" step="0.001" className="form-input"
+                                placeholder="الكمية" value={newLine.quantity}
+                                onChange={e => setNewLine(d => ({ ...d, quantity: e.target.value }))}
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-primary btn-icon"
+                                title="إضافة"
+                                disabled={addLineMutation.isPending || !newLine.item_id || !newLine.quantity}
+                                onClick={handleAddLine}
+                              ><Plus size={14} /></button>
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </>
                 )

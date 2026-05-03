@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from '@/lib/query-keys'
 import {
   fetchReturns, fetchSalesInvoicesForReturn, fetchPurchaseInvoicesForReturn,
+  fetchSalesInvoiceLines, fetchPurchaseInvoiceLines,
   createReturn, type CreateReturnInput,
 } from './returns.service'
 
@@ -15,6 +16,16 @@ export function useSalesInvoicesForReturn() {
 
 export function usePurchaseInvoicesForReturn() {
   return useQuery({ queryKey: ['return-purchase-invoices'], queryFn: fetchPurchaseInvoicesForReturn })
+}
+
+export function useInvoiceLinesForReturn(type: 'sales' | 'purchase', invoiceId: string) {
+  return useQuery({
+    queryKey: ['return-invoice-lines', type, invoiceId],
+    queryFn: () => type === 'sales'
+      ? fetchSalesInvoiceLines(invoiceId)
+      : fetchPurchaseInvoiceLines(invoiceId),
+    enabled: !!invoiceId,
+  })
 }
 
 export function useCreateReturn() {

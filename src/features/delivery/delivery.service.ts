@@ -87,7 +87,7 @@ async function assertStockForOrder(salesOrderId: string): Promise<void> {
 }
 
 export async function confirmDeliveryByOrderId(orderId: string): Promise<void> {
-  let { data: note, error } = await supabase
+  const { data: note, error } = await supabase
     .from('delivery_note')
     .select('*')
     .eq('sales_order_id', orderId)
@@ -98,7 +98,7 @@ export async function confirmDeliveryByOrderId(orderId: string): Promise<void> {
   if (!note) {
     // No delivery note yet — verify stock, then create one and confirm.
     await assertStockForOrder(orderId)
-    const { data: created, error: createErr } = await supabase
+    let { data: created, error: createErr } = await supabase
       .from('delivery_note')
       .insert({ sales_order_id: orderId, notes: null })
       .select()

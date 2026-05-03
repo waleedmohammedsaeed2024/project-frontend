@@ -46,6 +46,63 @@ export async function fetchSalesInvoices(): Promise<SalesInvoice[]> {
   })) as unknown as SalesInvoice[]
 }
 
+export type SalesInvoiceLine = {
+  id: string
+  item_id: string
+  packaging_id: string | null
+  item_name: string
+  packaging_label: string | null
+  quantity: number
+  item_cost: number
+  item_price: number
+}
+
+export async function fetchSalesInvoiceLines(salesOrderId: string): Promise<SalesInvoiceLine[]> {
+  const { data: lines, error } = await supabase
+    .from('sales_order_item')
+    .select('*')
+    .eq('sales_order_id', salesOrderId)
+    .is('deleted_at', null)
+  assertNoError(error)
+  if (!lines?.length) return []
+
+  const itemIds = Array.from(new Set(lines.map(l => (l as { item_id: string }).item_id).filter(Boolean)))
+  const pkgIds = Array.from(new Set(lines.map(l => (l as { packaging_id?: string | null }).packaging_id).filter((x): x is string => !!x)))
+
+  const { data: invItems } = itemIds.length
+    ? await supabase.from('inventory_item').select('id, item_name').in('id', itemIds)
+    : { data: [] as { id: string; item_name: string }[] }
+  const { data: pkgs } = pkgIds.length
+    ? await supabase.from('packaging').select('id, pack_arab, pack_eng').in('id', pkgIds)
+    : { data: [] as { id: string; pack_arab: string; pack_eng: string }[] }
+
+  const itemById = new Map((invItems ?? []).map(i => [i.id, i]))
+  const pkgById = new Map((pkgs ?? []).map(p => [p.id, p]))
+
+  return lines.map(l => {
+    const lj = l as {
+      id: string
+      item_id: string
+      packaging_id?: string | null
+      quantity: number
+      item_cost: number
+      item_price: number
+    }
+    const it = itemById.get(lj.item_id)
+    const pk = lj.packaging_id ? pkgById.get(lj.packaging_id) : null
+    return {
+      id: lj.id,
+      item_id: lj.item_id,
+      packaging_id: lj.packaging_id ?? null,
+      item_name: it?.item_name ?? '—',
+      packaging_label: pk?.pack_arab ?? pk?.pack_eng ?? null,
+      quantity: lj.quantity,
+      item_cost: lj.item_cost,
+      item_price: lj.item_price,
+    }
+  })
+}
+
 export async function cancelSalesInvoice(inv: SalesInvoice): Promise<void> {
   const { error: cancelErr } = await supabase
     .from('sales_invoice')

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Plus, Trash2, Eye } from 'lucide-react'
+import { formatDate, formatCurrency } from '@/lib/utils'
 import { useAdjustments, useCreateAdjustment } from './adjustments.hooks'
 import { useItems } from '@/features/items/items.hooks'
 import { usePagination, PaginationFooter } from '@/components/Pagination'
+import type { Adjustment } from '@/lib/database.types'
 
 type Direction = 'in' | 'out'
 interface LineItem {
@@ -17,13 +18,14 @@ interface LineItem {
 const EMPTY_LINE: LineItem = { item_id: '', packaging_id: '', direction: 'in', quantity: '', cost_price: '' }
 
 export default function AdjustmentsPage() {
-  const { data: adjustments = [], isLoading } = useAdjustments()
+  const { data: adjustments = [], isLoading, isError, error: adjustmentsError } = useAdjustments()
   const { data: items = [] } = useItems()
   const createMutation = useCreateAdjustment()
 
   const { visible: visibleAdjustments, page, setPage, pageSize, setPageSize, pageCount, total, start } = usePagination(adjustments, 20)
 
   const [showModal, setShowModal] = useState(false)
+  const [viewing, setViewing] = useState<Adjustment | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [reason, setReason] = useState('')
   const [lines, setLines] = useState<LineItem[]>([{ ...EMPTY_LINE }])
@@ -77,18 +79,27 @@ export default function AdjustmentsPage() {
       <div className="table-wrapper">
         <table>
           <thead>
-            <tr><th>السبب</th><th>التاريخ</th><th>عدد الأصناف</th></tr>
+            <tr><th>السبب</th><th>التاريخ</th><th>عدد الأصناف</th><th style={{ textAlign: 'end' }}>الإجراءات</th></tr>
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={3} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
+              <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
+            ) : isError ? (
+              <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'oklch(0.40 0.14 18)' }}>{adjustmentsError instanceof Error ? adjustmentsError.message : 'حدث خطأ أثناء تحميل التعديلات'}</td></tr>
             ) : visibleAdjustments.length === 0 ? (
-              <tr><td colSpan={3} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد تعديلات</td></tr>
+              <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد تعديلات</td></tr>
             ) : visibleAdjustments.map(adj => (
               <tr key={adj.id}>
                 <td style={{ fontWeight: 500 }}>{adj.reason}</td>
                 <td style={{ fontSize: 13 }}>{formatDate(adj.adjustment_date)}</td>
                 <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{(adj.items ?? []).length} صنف</td>
+                <td>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button className="btn btn-ghost btn-sm btn-icon" title="عرض التفاصيل" onClick={() => setViewing(adj)}>
+                      <Eye size={14} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -96,6 +107,100 @@ export default function AdjustmentsPage() {
       </div>
 
       <PaginationFooter page={page} pageCount={pageCount} pageSize={pageSize} total={total} start={start} setPage={setPage} setPageSize={setPageSize} />
+
+      {/* ── Detail dialog ─────────────────────────────────────────────────── */}
+      {viewing && (() => {
+        const lineItems = (viewing.items ?? []) as Array<{
+          id?: string
+          item_id: string
+          packaging_id?: string | null
+          quantity: number
+          cost_price: number
+          item?: { item_name?: string } | null
+          packaging?: { pack_arab?: string; pack_eng?: string } | null
+        }>
+        return (
+          <div className="modal-overlay" onClick={() => setViewing(null)}>
+            <div className="modal" style={{ maxWidth: 880, width: '95vw' }} onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2 className="modal-title">تفاصيل التعديل</h2>
+                <button className="btn btn-ghost btn-icon" onClick={() => setViewing(null)}>✕</button>
+              </div>
+              <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
+                  background: 'oklch(0.97 0.01 240 / 0.6)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)', padding: '14px 16px',
+                }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>التاريخ</div>
+                    <div style={{ fontWeight: 500 }}>{formatDate(viewing.adjustment_date)}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginBottom: 4 }}>السبب</div>
+                    <div style={{ fontWeight: 500 }}>{viewing.reason ?? '—'}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>الأصناف ({lineItems.length})</div>
+                  {lineItems.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 20, border: '1px dashed var(--color-border)', borderRadius: 'var(--radius-md)', color: 'var(--color-text-muted)', fontSize: 13 }}>
+                      لا توجد أصناف
+                    </div>
+                  ) : (
+                    <div className="table-wrapper" style={{ margin: 0 }}>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th style={{ width: 36 }}>#</th>
+                            <th>الصنف</th>
+                            <th style={{ width: 130 }}>التعبئة</th>
+                            <th style={{ width: 80, textAlign: 'center' }}>الاتجاه</th>
+                            <th style={{ width: 100, textAlign: 'end' }}>الكمية</th>
+                            <th style={{ width: 110, textAlign: 'end' }}>التكلفة</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {lineItems.map((l, i) => {
+                            const pkgLabel = l.packaging?.pack_arab ?? l.packaging?.pack_eng ?? null
+                            const isIncrease = l.quantity > 0
+                            return (
+                              <tr key={l.id ?? `${l.item_id}-${i}`}>
+                                <td style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>{i + 1}</td>
+                                <td style={{ fontWeight: 500 }}>{l.item?.item_name ?? '—'}</td>
+                                <td>
+                                  {pkgLabel
+                                    ? <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 999, background: 'oklch(0.93 0.05 240 / 0.35)', color: 'oklch(0.35 0.14 240)' }}>{pkgLabel}</span>
+                                    : <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>—</span>}
+                                </td>
+                                <td style={{ textAlign: 'center' }}>
+                                  <span style={{
+                                    display: 'inline-block', width: 26, height: 26, lineHeight: '26px',
+                                    borderRadius: 999, fontWeight: 700,
+                                    background: isIncrease ? 'oklch(0.65 0.16 145)' : 'oklch(0.62 0.18 25)',
+                                    color: 'white',
+                                  }}>{isIncrease ? '+' : '−'}</span>
+                                </td>
+                                <td style={{ textAlign: 'end', fontWeight: 600 }}>{Math.abs(l.quantity)}</td>
+                                <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(l.cost_price, 3)}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setViewing(null)}>إغلاق</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
