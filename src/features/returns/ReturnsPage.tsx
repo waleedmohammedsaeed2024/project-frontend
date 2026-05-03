@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useReturns, useSalesInvoicesForReturn, usePurchaseInvoicesForReturn, useCreateReturn } from './returns.hooks'
 import { useItems } from '@/features/items/items.hooks'
+import { usePagination, PaginationFooter } from '@/components/Pagination'
 
 interface LineItem { item_id: string; quantity: string; cost_price: string }
 
@@ -12,6 +13,8 @@ export default function ReturnsPage() {
   const { data: salesInvoices = [] } = useSalesInvoicesForReturn()
   const { data: purchaseInvoices = [] } = usePurchaseInvoicesForReturn()
   const createMutation = useCreateReturn()
+
+  const { visible: visibleReturns, page, setPage, pageSize, setPageSize, pageCount, total, start } = usePagination(returns, 20)
 
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,9 +73,9 @@ export default function ReturnsPage() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
-            ) : returns.length === 0 ? (
+            ) : visibleReturns.length === 0 ? (
               <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد مرتجعات</td></tr>
-            ) : returns.map(r => (
+            ) : visibleReturns.map(r => (
               <tr key={r.id}>
                 <td>
                   <span className={`badge ${r.return_type === 'sales' ? 'badge-completed' : 'badge-shipped'}`}>
@@ -87,6 +90,8 @@ export default function ReturnsPage() {
           </tbody>
         </table>
       </div>
+
+      <PaginationFooter page={page} pageCount={pageCount} pageSize={pageSize} total={total} start={start} setPage={setPage} setPageSize={setPageSize} />
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

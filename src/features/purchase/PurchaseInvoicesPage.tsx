@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Plus, Trash2, Eye, Pencil, Search, PackageOpen, Phone, Calendar, Hash, Building2 } from 'lucide-react'
+import { usePagination, PaginationFooter } from '@/components/Pagination'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { usePurchaseInvoices, useCreatePurchaseInvoice, usePurchaseInvoiceDetail } from './purchase.hooks'
 import { useItems } from '@/features/items/items.hooks'
@@ -117,6 +118,22 @@ export default function PurchaseInvoicesPage() {
   const { data: suppliers = [] } = useSuppliers()
   const { data: items = [] } = useItems()
   const createMutation = useCreatePurchaseInvoice()
+
+  // List search + pagination
+  const [search, setSearch] = useState('')
+
+  const q = search.trim().toLowerCase()
+  const filtered = q ? invoices.filter(inv => {
+    const supplierName = (inv as unknown as { supplier?: { partner_name?: string } }).supplier?.partner_name ?? ''
+    return (
+      inv.invoice_no.toLowerCase().includes(q) ||
+      supplierName.toLowerCase().includes(q) ||
+      (inv.supplier_inv_no ?? '').toLowerCase().includes(q)
+    )
+  }) : invoices
+
+  const { visible, page, setPage, pageSize, setPageSize, pageCount, total, start, resetToFirst } = usePagination(filtered, 20)
+  useEffect(() => { resetToFirst() }, [q, pageSize, resetToFirst])
 
   // Detail view
   const [viewingId, setViewingId] = useState<string | null>(null)
@@ -236,6 +253,20 @@ export default function PurchaseInvoicesPage() {
         </button>
       </div>
 
+      <div style={{ position: 'relative', marginBottom: 16, maxWidth: 360 }}>
+        <Search size={14} style={{
+          position: 'absolute', insetInlineStart: 10, top: '50%', transform: 'translateY(-50%)',
+          color: 'var(--color-text-muted)', pointerEvents: 'none',
+        }} />
+        <input
+          className="form-input"
+          style={{ paddingInlineStart: 32 }}
+          placeholder="ابحث برقم الفاتورة أو المورد أو مرجع المورد…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
       {/* Invoice list table */}
       <div className="table-wrapper">
         <table>
@@ -252,17 +283,17 @@ export default function PurchaseInvoicesPage() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
-            ) : invoices.length === 0 ? (
+            ) : visible.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد فواتير</td></tr>
-            ) : invoices.map(inv => {
-              const total = inv.items?.reduce((s, it) => s + it.quantity * it.item_cost, 0) ?? 0
+            ) : visible.map(inv => {
+              const lineTotal = inv.items?.reduce((s, it) => s + it.quantity * it.item_cost, 0) ?? 0
               return (
               <tr key={inv.id}>
                 <td><code style={{ fontSize: 13, fontWeight: 600 }}>{inv.invoice_no}</code></td>
                 <td style={{ fontWeight: 500 }}>{(inv as unknown as { supplier?: { partner_name: string } }).supplier?.partner_name ?? '—'}</td>
                 <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{inv.supplier_inv_no ?? '—'}</td>
                 <td style={{ fontSize: 13 }}>{formatDate(inv.invoice_date)}</td>
-                <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>{formatCurrency(total)}</td>
+                <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>{formatCurrency(lineTotal)}</td>
                 <td>
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button
@@ -278,6 +309,8 @@ export default function PurchaseInvoicesPage() {
           </tbody>
         </table>
       </div>
+
+      <PaginationFooter page={page} pageCount={pageCount} pageSize={pageSize} total={total} start={start} setPage={setPage} setPageSize={setPageSize} />
 
       {/* ── Create invoice modal ── */}
       {showModal && (

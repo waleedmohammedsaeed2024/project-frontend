@@ -211,12 +211,14 @@ export interface AdjustmentItem {
   id: string
   adjustment_id: string
   item_id: string
+  packaging_id: string | null
   quantity: number
   cost_price: number
   created_at: string
   updated_at: string
   deleted_at: string | null
   item?: InventoryItem
+  packaging?: Pick<Packaging, 'pack_eng' | 'pack_arab'>
 }
 
 export interface AuditLog {

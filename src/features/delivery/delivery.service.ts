@@ -4,13 +4,46 @@ import { sendWhatsAppNotification, formatSalesInvoiceMessage } from '@/lib/whats
 import type { DeliveryNote, SalesOrder } from '@/lib/database.types'
 
 export async function fetchDeliveryNotes(): Promise<DeliveryNote[]> {
-  const { data, error } = await supabase
+  const { data: notes, error } = await supabase
     .from('delivery_note')
-    .select('*, sales_order:sales_order(*, client:partner!client_id(partner_name), customer:partner!customer_id(partner_name))')
+    .select('*')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
   assertNoError(error)
-  return data as unknown as DeliveryNote[]
+  if (!notes || notes.length === 0) return [] as unknown as DeliveryNote[]
+
+  const orderIds = Array.from(new Set(notes.map(n => n.sales_order_id)))
+  const { data: orders, error: ordersErr } = await supabase
+    .from('sales_order')
+    .select('*')
+    .in('id', orderIds)
+  assertNoError(ordersErr)
+
+  const partnerIds = Array.from(new Set(
+    (orders ?? []).flatMap(o => [
+      (o as { client_id: string }).client_id,
+      (o as { customer_id: string }).customer_id,
+    ]).filter(Boolean),
+  ))
+  const { data: partners, error: partnersErr } = partnerIds.length
+    ? await supabase.from('partner').select('id, partner_name').in('id', partnerIds)
+    : { data: [], error: null }
+  assertNoError(partnersErr)
+
+  const partnerById = new Map((partners ?? []).map(p => [p.id, p]))
+  const orderById = new Map((orders ?? []).map(o => {
+    const co = o as { id: string; client_id: string; customer_id: string }
+    return [co.id, {
+      ...o,
+      client: partnerById.get(co.client_id) ?? null,
+      customer: partnerById.get(co.customer_id) ?? null,
+    }]
+  }))
+
+  return notes.map(n => ({
+    ...n,
+    sales_order: orderById.get(n.sales_order_id) ?? null,
+  })) as unknown as DeliveryNote[]
 }
 
 export async function fetchOrdersForDelivery(): Promise<SalesOrder[]> {
@@ -23,6 +56,36 @@ export async function fetchOrdersForDelivery(): Promise<SalesOrder[]> {
   return data as unknown as SalesOrder[]
 }
 
+async function assertStockForOrder(salesOrderId: string): Promise<void> {
+  const { data: lines, error } = await supabase
+    .from('sales_order_item')
+    .select('item_id, packaging_id, quantity, item:inventory_item(item_name), packaging:packaging(pack_arab, pack_eng)')
+    .eq('sales_order_id', salesOrderId)
+    .is('deleted_at', null)
+  assertNoError(error)
+
+  for (const line of lines ?? []) {
+    const packagingId = (line as { packaging_id?: string | null }).packaging_id ?? null
+
+    let sq = supabase.from('item_stock').select('quantity').eq('item_id', line.item_id)
+    sq = packagingId ? sq.eq('packaging_id', packagingId) : sq.is('packaging_id', null)
+    const { data: stock } = await sq.maybeSingle()
+
+    const available = stock?.quantity ?? 0
+    if (available < line.quantity) {
+      const j = line as unknown as {
+        item?: { item_name?: string }
+        packaging?: { pack_arab?: string; pack_eng?: string }
+      }
+      const itemName = j.item?.item_name ?? '—'
+      const pkgLabel = j.packaging?.pack_arab ?? j.packaging?.pack_eng ?? 'بدون تعبئة'
+      throw new Error(
+        `المخزون غير كافٍ للصنف "${itemName}" (${pkgLabel}): المتوفر ${available}، المطلوب ${line.quantity}`,
+      )
+    }
+  }
+}
+
 export async function confirmDeliveryByOrderId(orderId: string): Promise<void> {
   let { data: note, error } = await supabase
     .from('delivery_note')
@@ -33,7 +96,8 @@ export async function confirmDeliveryByOrderId(orderId: string): Promise<void> {
   assertNoError(error)
 
   if (!note) {
-    // No delivery note yet — create one automatically then confirm
+    // No delivery note yet — verify stock, then create one and confirm.
+    await assertStockForOrder(orderId)
     const { data: created, error: createErr } = await supabase
       .from('delivery_note')
       .insert({ sales_order_id: orderId, notes: null })
@@ -47,6 +111,8 @@ export async function confirmDeliveryByOrderId(orderId: string): Promise<void> {
 }
 
 export async function createDeliveryNote(salesOrderId: string, notes?: string): Promise<void> {
+  await assertStockForOrder(salesOrderId)
+
   const { error: updErr } = await supabase
     .from('sales_order')
     .update({ status: 'p' })
@@ -79,13 +145,16 @@ export async function confirmDelivery(note: DeliveryNote): Promise<void> {
   for (const line of items) {
     const packagingId = (line as { packaging_id?: string | null }).packaging_id ?? null
 
-    // Deduct from per-packaging stock
+    // Deduct from per-packaging stock. Stock sufficiency was enforced at the
+    // shipping step (createDeliveryNote / assertStockForOrder); at delivery we
+    // just record the movement without blocking.
     let sq = supabase.from('item_stock').select('id, quantity').eq('item_id', line.item_id)
     sq = packagingId ? sq.eq('packaging_id', packagingId) : sq.is('packaging_id', null)
     const { data: stock } = await sq.maybeSingle()
 
-    if (!stock || stock.quantity < line.quantity) throw new Error('المخزون غير كافٍ')
-    await supabase.from('item_stock').update({ quantity: stock.quantity - line.quantity }).eq('id', stock.id)
+    if (stock) {
+      await supabase.from('item_stock').update({ quantity: stock.quantity - line.quantity }).eq('id', stock.id)
+    }
 
     // Keep inventory_item aggregate in sync
     const item = (line as unknown as { item: { quantity: number } }).item
@@ -112,9 +181,6 @@ export async function confirmDelivery(note: DeliveryNote): Promise<void> {
     })
   }
 
-  await supabase.from('sales_order').update({ status: 'c' }).eq('id', note.sales_order_id)
-  await supabase.from('delivery_note').update({ confirmed_at: new Date().toISOString() }).eq('id', note.id)
-
   const totalAmount = items.reduce(
     (sum: number, l: { quantity: number; item_price: number }) => sum + l.quantity * l.item_price,
     0,
@@ -130,8 +196,11 @@ export async function confirmDelivery(note: DeliveryNote): Promise<void> {
     invoice_date: new Date().toISOString(),
     total_amount: totalAmount,
     is_cancelled: false,
-  })
+  }).select().single()
   assertNoError(invInsertErr)
+
+  await supabase.from('sales_order').update({ status: 'c' }).eq('id', note.sales_order_id)
+  await supabase.from('delivery_note').update({ confirmed_at: new Date().toISOString() }).eq('id', note.id)
 
   const clientId = orderData?.client_id
   const clientInfo = (orderData as unknown as { client?: { partner_name: string; phone_no: string | null } })?.client

@@ -13,7 +13,6 @@ export function printOrderPDF(order: SalesOrder) {
   const client = (order as unknown as { client?: PartnerShape }).client
   const customer = (order as unknown as { customer?: PartnerShape }).customer
   const lines = (order.items ?? []) as SalesOrderItem[]
-  const grandTotal = lines.reduce((s, l) => s + l.quantity * l.item_price, 0)
   const ref = order.id.slice(0, 8).toUpperCase()
 
   // ── Line items rows ───────────────────────────────────────────────────────
@@ -22,7 +21,6 @@ export function printOrderPDF(order: SalesOrder) {
     const eng = l.item?.item_english_name ?? ''
     const pkgAr = l.packaging?.pack_arab ?? '—'
     const pkgEn = l.packaging?.pack_eng ?? ''
-    const total = l.quantity * l.item_price
     return `<tr>
       <td style="text-align:center;color:#666">${i + 1}</td>
       <td>${name}${eng ? `<br><span style="font-size:10px;color:#888">${eng}</span>` : ''}</td>
@@ -30,22 +28,6 @@ export function printOrderPDF(order: SalesOrder) {
         <span style="font-weight:600">${pkgAr}</span>${pkgEn && pkgEn !== pkgAr ? `<br><span style="font-size:10px;color:#888">${pkgEn}</span>` : ''}
       </td>
       <td style="text-align:center">${l.quantity}</td>
-      <td style="text-align:right">${l.item_price.toFixed(3)}</td>
-      <td style="text-align:right;font-weight:600">${total.toFixed(3)}</td>
-    </tr>`
-  }).join('')
-
-  // ── Packaging detail rows (one row per line, expandable fill area) ────────
-  const pkgDetailRows = lines.map((l, i) => {
-    const name = l.item?.item_name ?? '—'
-    const pkgAr = l.packaging?.pack_arab ?? '—'
-    return `<tr>
-      <td style="text-align:center;color:#666;width:36px">${i + 1}</td>
-      <td style="width:160px">${name}</td>
-      <td style="width:100px;font-weight:600;text-align:center">${pkgAr}</td>
-      <td style="width:60px;text-align:center">${l.quantity}</td>
-      <td style="min-width:80px">&nbsp;</td>
-      <td style="min-width:140px">&nbsp;</td>
     </tr>`
   }).join('')
 
@@ -61,21 +43,17 @@ export function printOrderPDF(order: SalesOrder) {
   .meta label{font-size:10px;color:#888;display:block;margin-bottom:3px;text-transform:uppercase;letter-spacing:.5px}
   .meta .val{font-weight:600;font-size:13px}
   .meta .sub{font-size:11px;color:#555;margin-top:2px}
-  h2{font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #1e293b}
-  h2.pkg-title{border-bottom-color:#0f766e;color:#0f4c42}
+  h2{font-size:14px;font-weight:700;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #93c5fd;color:#1e3a8a}
   table{width:100%;border-collapse:collapse;margin-bottom:8px}
-  th{background:#1e293b;color:#fff;padding:9px 10px;text-align:right;font-size:11px;font-weight:600}
-  th.pkg-head{background:#0f766e}
+  th{background:#bfdbfe;color:#1e3a8a;padding:9px 10px;text-align:right;font-size:11px;font-weight:600}
   td{padding:8px 10px;border-bottom:1px solid #eee;font-size:12px;vertical-align:middle}
-  .pkg-table td{padding:10px 10px;border:1px solid #ddd;height:38px}
-  .total-row td{font-weight:700;background:#f1f5f9;font-size:14px;border-top:2px solid #cbd5e1}
   .ack{margin-top:40px}
   .ack h2{border-bottom-color:#64748b;color:#334155}
   .ack-body{font-size:12px;color:#444;margin:14px 0 24px;line-height:1.7}
   .sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
   .sig-box label{font-size:11px;color:#555;display:block;margin-bottom:10px;font-weight:600}
   .sig-line{border-bottom:1px solid #333;height:40px}
-  @media print{@page{size:A4;margin:18mm} body{padding:0}}
+  @media print{@page{size:A4;margin:18mm} body{padding:0} th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style></head>
 <body>
   <h1>إذن تسليم / Delivery Note</h1>
@@ -107,36 +85,9 @@ export function printOrderPDF(order: SalesOrder) {
       <th>الصنف / Item</th>
       <th style="width:110px;text-align:center">التعبئة</th>
       <th style="width:70px;text-align:center">الكمية</th>
-      <th style="width:100px;text-align:right">السعر / وحدة</th>
-      <th style="width:110px;text-align:right">الإجمالي</th>
     </tr></thead>
-    <tbody>${rowsHTML || '<tr><td colspan="6" style="text-align:center;color:#999;padding:16px">لا توجد أصناف</td></tr>'}</tbody>
-    <tfoot><tr class="total-row">
-      <td colspan="5" style="text-align:right;padding-left:12px">الإجمالي الكلي / Grand Total:</td>
-      <td style="text-align:right">${grandTotal.toFixed(3)}</td>
-    </tr></tfoot>
+    <tbody>${rowsHTML || '<tr><td colspan="4" style="text-align:center;color:#999;padding:16px">لا توجد أصناف</td></tr>'}</tbody>
   </table>
-
-  <!-- ── Packaging details fill area ────────────────────────────────── -->
-  <div style="margin-top:28px">
-    <h2 class="pkg-title">تفاصيل التعبئة / Packaging Details</h2>
-    <table class="pkg-table">
-      <thead><tr>
-        <th class="pkg-head" style="width:36px;text-align:center">#</th>
-        <th class="pkg-head">الصنف</th>
-        <th class="pkg-head" style="width:110px;text-align:center">نوع التعبئة</th>
-        <th class="pkg-head" style="width:70px;text-align:center">الكمية</th>
-        <th class="pkg-head" style="width:90px;text-align:center">العدد المستلم</th>
-        <th class="pkg-head">ملاحظات التعبئة</th>
-      </tr></thead>
-      <tbody>
-        ${pkgDetailRows || '<tr><td colspan="6" style="text-align:center;color:#999;padding:16px">لا توجد بنود</td></tr>'}
-        <!-- extra blank rows for manual additions -->
-        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-      </tbody>
-    </table>
-  </div>
 
   <!-- ── Acknowledgement ─────────────────────────────────────────────── -->
   <div class="ack">

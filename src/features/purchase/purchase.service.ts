@@ -37,6 +37,7 @@ export async function fetchPurchaseInvoices(): Promise<PurchaseInvoice[]> {
     .from('purchase_invoice')
     .select('*, supplier:partner!supplier_id(partner_name, phone_no), items:purchase_invoice_item(quantity, item_cost)')
     .is('deleted_at', null)
+    .order('invoice_date', { ascending: false })
     .order('created_at', { ascending: false })
   assertNoError(error)
   return data as unknown as PurchaseInvoice[]

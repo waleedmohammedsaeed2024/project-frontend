@@ -36,20 +36,22 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid-cols-4" style={{ marginBottom: 28 }}>
+      <div className="grid-cols-4 stat-container" style={{ marginBottom: 28 }}>
         {statCards.map((s) => (
-          <div className="stat-card" key={s.label}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span className="stat-label">{s.label}</span>
-              <div style={{
-                width: 36, height: 36, borderRadius: 'var(--radius-md)',
-                background: s.color + '22',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <s.icon size={18} color={s.color} />
+            <div key={s.label} className='lg:not-first:border-s-2  border-gray-300'>
+              <div className='flex gap-2 items-center mb-2 ms-5'>
+                  <s.icon size={18} color={s.color}  />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '75%' }}>
+                    <span className="stat-label font-bold">{s.label}</span>
+                        <div style={{
+                          width: 20, height: 36, borderRadius: 'var(--radius-md)',
+                          background: s.color + '22', fontSize: '20px', fontWeight: 700,  
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                        </div>
+                  </div>
               </div>
-            </div>
-            <div className="stat-value">{s.value}</div>
+            <div className="stat-value text-center w-1/2">{s.value}</div>
           </div>
         ))}
       </div>
@@ -85,7 +87,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        <div className="card" style={{ padding: 24 }}>
+        <div className="clients-card" style={{ padding: 24 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>أرصدة العملاء</h3>
           {clientBalances.length === 0 ? (
             <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 14 }}>

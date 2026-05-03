@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { usePagination, PaginationFooter } from '@/components/Pagination'
 import { Plus, Eye, XCircle, Search, Printer, CheckCircle2, Phone, MapPin, FileText } from 'lucide-react'
 import { formatDate, formatCurrency, ORDER_STATUS_CLASS, ORDER_STATUS_LABEL } from '@/lib/utils'
 import { printOrderPDF } from '@/lib/printOrderPDF'
@@ -11,7 +12,7 @@ import { useClients, useCustomersByClient } from '@/features/partners/partners.h
 
 const STATUS_FILTERS = [
   { label: 'الكل', value: '' },
-  { label: 'قيد التنفيذ', value: 'o' },
+  { label: 'الطلبات ', value: 'o' },
   { label: 'قيد التوصيل', value: 'p' },
   { label: 'تم التسليم', value: 'c' },
   { label: 'ملغى', value: 'd' },
@@ -105,12 +106,27 @@ function ItemSearch({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function SalesOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<OrderStatus | ''>('')
+  const [search, setSearch] = useState('')
   const { data: orders = [], isLoading } = useSalesOrders(statusFilter)
   const { data: items = [] } = useItems()
   const { data: clients = [] } = useClients()
   const createMutation = useCreateSalesOrder()
   const cancelMutation = useCancelSalesOrder()
   const confirmDeliveryMutation = useConfirmOrderDelivery()
+
+  const q = search.trim().toLowerCase()
+  const filteredOrders = q ? orders.filter(o => {
+    const j = o as unknown as { client?: { partner_name?: string }; customer?: { partner_name?: string } }
+    return (
+      o.id.toLowerCase().includes(q) ||
+      (j.client?.partner_name ?? '').toLowerCase().includes(q) ||
+      (j.customer?.partner_name ?? '').toLowerCase().includes(q) ||
+      (o.site ?? '').toLowerCase().includes(q)
+    )
+  }) : orders
+
+  const { visible: visibleOrders, page, setPage, pageSize, setPageSize, pageCount, total, start, resetToFirst } = usePagination(filteredOrders, 20)
+  useEffect(() => { resetToFirst() }, [q, pageSize, statusFilter, resetToFirst])
 
   // Create modal
   const [showModal, setShowModal] = useState(false)
@@ -199,17 +215,32 @@ export default function SalesOrdersPage() {
         </button>
       </div>
 
-      {/* Status filter tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20, flexWrap: 'wrap' }}>
-        {STATUS_FILTERS.map(f => (
-          <button key={f.value} onClick={() => setStatusFilter(f.value as OrderStatus | '')} style={{
-            padding: '6px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
-            cursor: 'pointer', background: statusFilter === f.value ? 'var(--color-primary)' : 'var(--color-bg-card)',
-            color: statusFilter === f.value ? 'white' : 'var(--color-text)', fontWeight: 500, fontSize: 13,
-          }}>
-            {f.label}
-          </button>
-        ))}
+      {/* Status filter tabs + search */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {STATUS_FILTERS.map(f => (
+            <button key={f.value} onClick={() => setStatusFilter(f.value as OrderStatus | '')} style={{
+              padding: '6px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)',
+              cursor: 'pointer', background: statusFilter === f.value ? 'var(--color-primary)' : 'var(--color-bg-card)',
+              color: statusFilter === f.value ? 'white' : 'var(--color-text)', fontWeight: 500, fontSize: 13,
+            }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div style={{ position: 'relative', marginInlineStart: 'auto', minWidth: 240 }}>
+          <Search size={14} style={{
+            position: 'absolute', insetInlineStart: 10, top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--color-text-muted)', pointerEvents: 'none',
+          }} />
+          <input
+            className="form-input"
+            style={{ paddingInlineStart: 32 }}
+            placeholder="ابحث برقم الطلب أو العميل أو الزبون أو الموقع…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* Orders table */}
@@ -224,9 +255,9 @@ export default function SalesOrdersPage() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
-            ) : orders.length === 0 ? (
+            ) : visibleOrders.length === 0 ? (
               <tr><td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد طلبات</td></tr>
-            ) : orders.map(o => {
+            ) : visibleOrders.map(o => {
               type WithJoins = { client?: { partner_name: string }; customer?: { partner_name: string } }
               const joined = o as unknown as WithJoins
               return (
@@ -246,20 +277,19 @@ export default function SalesOrdersPage() {
                         onClick={() => setViewingId(o.id)}
                       ><Eye size={14} /></button>
 
-                      {/* Confirm delivery — قيد التنفيذ or قيد التوصيل */}
-                      {(o.status === 'o' || o.status === 'p') && (
+                      {/* Confirm delivery — قيد التوصيل only */}
+                      {o.status === 'p' && (
                         <button
-                          className="btn btn-primary btn-sm"
+                          className="btn btn-primary btn-sm btn-icon"
                           title="تأكيد التسليم وإنشاء الفاتورة"
                           disabled={confirmDeliveryMutation.isPending}
                           onClick={() => handleConfirmDelivery(o.id)}
-                          style={{ gap: 4 }}
                         >
-                          <CheckCircle2 size={13} /> تسليم
+                          <CheckCircle2 size={14} />
                         </button>
                       )}
 
-                      {/* Cancel — قيد التنفيذ only */}
+                      {/* Cancel — الطلبات only */}
                       {o.status === 'o' && (
                         <button
                           className="btn btn-danger btn-sm btn-icon"
@@ -289,6 +319,8 @@ export default function SalesOrdersPage() {
           </tbody>
         </table>
       </div>
+
+      <PaginationFooter page={page} pageCount={pageCount} pageSize={pageSize} total={total} start={start} setPage={setPage} setPageSize={setPageSize} />
 
       {/* ── Order detail dialog ───────────────────────────────────────────────── */}
       {viewingId && (

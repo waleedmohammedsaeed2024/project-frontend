@@ -3,13 +3,47 @@ import { assertNoError } from '@/shared/types'
 import type { SalesInvoice } from '@/lib/database.types'
 
 export async function fetchSalesInvoices(): Promise<SalesInvoice[]> {
-  const { data, error } = await supabase
+  const { data: invoices, error } = await supabase
     .from('sales_invoice')
-    .select('*, sales_order:sales_order(*, client:partner!client_id(partner_name), customer:partner!customer_id(partner_name))')
+    .select('*')
     .is('deleted_at', null)
+    .order('invoice_date', { ascending: false })
     .order('created_at', { ascending: false })
   assertNoError(error)
-  return data as unknown as SalesInvoice[]
+  if (!invoices || invoices.length === 0) return [] as unknown as SalesInvoice[]
+
+  const orderIds = Array.from(new Set(invoices.map(i => i.sales_order_id)))
+  const { data: orders, error: ordersErr } = await supabase
+    .from('sales_order')
+    .select('*')
+    .in('id', orderIds)
+  assertNoError(ordersErr)
+
+  const partnerIds = Array.from(new Set(
+    (orders ?? []).flatMap(o => [
+      (o as { client_id: string }).client_id,
+      (o as { customer_id: string }).customer_id,
+    ]).filter(Boolean),
+  ))
+  const { data: partners, error: partnersErr } = partnerIds.length
+    ? await supabase.from('partner').select('id, partner_name').in('id', partnerIds)
+    : { data: [], error: null }
+  assertNoError(partnersErr)
+
+  const partnerById = new Map((partners ?? []).map(p => [p.id, p]))
+  const orderById = new Map((orders ?? []).map(o => {
+    const co = o as { id: string; client_id: string; customer_id: string }
+    return [co.id, {
+      ...o,
+      client: partnerById.get(co.client_id) ?? null,
+      customer: partnerById.get(co.customer_id) ?? null,
+    }]
+  }))
+
+  return invoices.map(inv => ({
+    ...inv,
+    sales_order: orderById.get(inv.sales_order_id) ?? null,
+  })) as unknown as SalesInvoice[]
 }
 
 export async function cancelSalesInvoice(inv: SalesInvoice): Promise<void> {

@@ -20,7 +20,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     supabase.from('sales_order').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('sales_order').select('*', { count: 'exact', head: true }).eq('status', 'o').is('deleted_at', null),
     supabase.from('partner').select('*').eq('partner_type', 'c').is('deleted_at', null).order('balance', { ascending: false }).limit(5),
-    supabase.from('sales_order').select('*, client:partner!client_id(partner_name), customer:partner!customer_id(partner_name)').is('deleted_at', null).order('created_at', { ascending: false }).limit(8),
+    supabase.from('sales_order').select('*, client:partner!client_id(partner_name), customer:partner!customer_id(partner_name)').is('deleted_at', null).order('created_at', { ascending: false }).limit(10),
     supabase.from('inventory_item').select('*, packaging(pack_eng)').is('deleted_at', null).filter('quantity', 'lte', 'orderpoint').limit(5),
   ])
 

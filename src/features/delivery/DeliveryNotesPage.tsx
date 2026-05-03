@@ -1,8 +1,9 @@
-import { useState } from 'react'
-import { CheckCircle2, Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CheckCircle2, Plus, Search } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import type { DeliveryNote } from '@/lib/database.types'
 import { useDeliveryNotes, useOrdersForDelivery, useCreateDeliveryNote, useConfirmDelivery } from './delivery.hooks'
+import { usePagination, PaginationFooter } from '@/components/Pagination'
 
 export default function DeliveryNotesPage() {
   const { data: notes = [], isLoading } = useDeliveryNotes()
@@ -13,6 +14,20 @@ export default function DeliveryNotesPage() {
   const [showModal, setShowModal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [form, setForm] = useState({ sales_order_id: '', notes: '' })
+  const [search, setSearch] = useState('')
+
+  const q = search.trim().toLowerCase()
+  const filteredNotes = q ? notes.filter(n => {
+    const j = n as unknown as { sales_order?: { client?: { partner_name?: string }; customer?: { partner_name?: string }; site?: string | null } }
+    return (
+      (j.sales_order?.client?.partner_name ?? '').toLowerCase().includes(q) ||
+      (j.sales_order?.customer?.partner_name ?? '').toLowerCase().includes(q) ||
+      (j.sales_order?.site ?? '').toLowerCase().includes(q)
+    )
+  }) : notes
+
+  const { visible: visibleNotes, page, setPage, pageSize, setPageSize, pageCount, total, start, resetToFirst } = usePagination(filteredNotes, 20)
+  useEffect(() => { resetToFirst() }, [q, pageSize, resetToFirst])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -47,6 +62,20 @@ export default function DeliveryNotesPage() {
         </button>
       </div>
 
+      <div style={{ position: 'relative', marginBottom: 16, maxWidth: 360 }}>
+        <Search size={14} style={{
+          position: 'absolute', insetInlineStart: 10, top: '50%', transform: 'translateY(-50%)',
+          color: 'var(--color-text-muted)', pointerEvents: 'none',
+        }} />
+        <input
+          className="form-input"
+          style={{ paddingInlineStart: 32 }}
+          placeholder="ابحث بالعميل أو الزبون أو الموقع…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+
       <div className="table-wrapper">
         <table>
           <thead>
@@ -58,9 +87,9 @@ export default function DeliveryNotesPage() {
           <tbody>
             {isLoading ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>جاري التحميل…</td></tr>
-            ) : notes.length === 0 ? (
+            ) : visibleNotes.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--color-text-muted)' }}>لا توجد إذونات تسليم</td></tr>
-            ) : notes.map(note => {
+            ) : visibleNotes.map(note => {
               const order = (note as unknown as { sales_order: { client?: { partner_name: string }; customer?: { partner_name: string }; site?: string | null } }).sales_order
               const confirmed = !!note.confirmed_at
               return (
@@ -89,6 +118,8 @@ export default function DeliveryNotesPage() {
           </tbody>
         </table>
       </div>
+
+      <PaginationFooter page={page} pageCount={pageCount} pageSize={pageSize} total={total} start={start} setPage={setPage} setPageSize={setPageSize} />
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>

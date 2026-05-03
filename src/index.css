@@ -149,8 +149,18 @@ p { margin: 0; }
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
+  height: auto
 }
 
+
+.clients-card{
+  background: transparent;
+  /* background: var(--color-bg-card); */
+  /* border: 1px solid var(--color-border); */
+  /* border-radius: var(--radius-lg); */
+  /* box-shadow: var(--shadow-sm); */
+  height: 200px;
+}
 /* ---- Status Badges ---- */
 .badge {
   display: inline-flex;
@@ -342,10 +352,11 @@ tbody td {
 }
 
 .stat-label {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  color: darkgray;
   color: var(--color-text-muted);
 }
 
@@ -359,6 +370,20 @@ tbody td {
 .stat-sub {
   font-size: 13px;
   color: var(--color-text-muted);
+}
+
+.stat-container{
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  background-color: white;
+  /* background-color: antiquewhite; */
+  padding: 20px;
+  border: none;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s, transform 0.15s;
+
 }
 
 /* ---- Sidebar nav items ---- */
