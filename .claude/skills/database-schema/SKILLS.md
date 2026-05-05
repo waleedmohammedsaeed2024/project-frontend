@@ -1,8 +1,8 @@
----
+| full_schema_markdown                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+ ---
 name: DataBase schema
-description: all tables in schama with it's type and constraints
+description: all tables in schema with its type and constraints
 ---
-
 
 ## Table `adjustment`
 
@@ -12,10 +12,10 @@ description: all tables in schama with it's type and constraints
 |------|------|-------------|
 | `id` | `uuid` | Primary |
 | `reason` | `text` |  |
-| `adjustment_date` | `timestamptz` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `adjustment_date` | `timestamp with time zone` |  |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `adjustment_item`
 
@@ -28,9 +28,10 @@ description: all tables in schama with it's type and constraints
 | `item_id` | `uuid` |  |
 | `quantity` | `numeric` |  |
 | `cost_price` | `numeric` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
+| `packaging_id` | `uuid` | Nullable |
 
 ## Table `delivery_note`
 
@@ -39,13 +40,13 @@ description: all tables in schama with it's type and constraints
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `sales_order_id` | `uuid` |  Unique |
-| `delivery_date` | `timestamptz` |  |
-| `notes` | `text` |  Nullable |
-| `confirmed_at` | `timestamptz` |  Nullable |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `sales_order_id` | `uuid` | Unique |
+| `delivery_date` | `timestamp with time zone` |  |
+| `notes` | `text` | Nullable |
+| `confirmed_at` | `timestamp with time zone` | Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `inventory`
 
@@ -54,12 +55,12 @@ description: all tables in schama with it's type and constraints
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `operation_type` | `bpchar` |  |
-| `reference_id` | `uuid` |  Nullable |
-| `operation_date` | `timestamptz` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `operation_type` | `character` |  |
+| `reference_id` | `uuid` | Nullable |
+| `operation_date` | `timestamp with time zone` |  |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `inventory_item`
 
@@ -68,15 +69,15 @@ description: all tables in schama with it's type and constraints
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `item_name` | `varchar` |  |
-| `item_english_name` | `varchar` |  Nullable |
-| `item_image` | `text` |  Nullable |
+| `item_name` | `character varying` |  |
+| `item_english_name` | `character varying` | Nullable |
+| `item_image` | `text` | Nullable |
 | `avg_cost` | `numeric` |  |
 | `quantity` | `numeric` |  |
 | `orderpoint` | `numeric` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `inventory_record`
 
@@ -89,9 +90,9 @@ description: all tables in schama with it's type and constraints
 | `item_id` | `uuid` |  |
 | `qty_change` | `numeric` |  |
 | `cost_at_operation` | `numeric` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `item`
 
@@ -102,9 +103,9 @@ description: all tables in schama with it's type and constraints
 | `id` | `uuid` | Primary |
 | `item_name` | `text` |  |
 | `item_english_name` | `text` |  |
-| `packaging` | `uuid` |  Nullable |
-| `item_code` | `text` |  Unique |
-| `item_image` | `text` |  Nullable |
+| `packaging` | `uuid` | Nullable |
+| `item_code` | `text` | Unique |
+| `item_image` | `text` | Nullable |
 
 ## Table `item_packaging`
 
@@ -114,7 +115,7 @@ description: all tables in schama with it's type and constraints
 |------|------|-------------|
 | `item_id` | `uuid` | Primary |
 | `packaging_id` | `uuid` | Primary |
-| `created_at` | `timestamptz` |  |
+| `created_at` | `timestamp with time zone` |  |
 
 ## Table `item_stock`
 
@@ -124,11 +125,11 @@ description: all tables in schama with it's type and constraints
 |------|------|-------------|
 | `id` | `uuid` | Primary |
 | `item_id` | `uuid` |  |
-| `packaging_id` | `uuid` |  Nullable |
+| `packaging_id` | `uuid` | Nullable |
 | `quantity` | `numeric` |  |
 | `avg_cost` | `numeric` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
 
 ## Table `packaging`
 
@@ -139,9 +140,9 @@ description: all tables in schama with it's type and constraints
 | `id` | `uuid` | Primary |
 | `pack_arab` | `text` |  |
 | `pack_eng` | `text` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
 
 ## Table `partner`
 
@@ -151,13 +152,28 @@ description: all tables in schama with it's type and constraints
 |------|------|-------------|
 | `id` | `uuid` | Primary |
 | `partner_name` | `text` |  |
-| `partner_type` | `partner_type_enum` |  |
-| `phone_no` | `text` |  Nullable |
-| `balance` | `float8` |  |
-| `parent_client_id` | `uuid` |  Nullable |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `partner_type` | `USER-DEFINED` |  |
+| `phone_no` | `text` | Nullable |
+| `balance` | `double precision` |  |
+| `parent_client_id` | `uuid` | Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
+
+## Table `payments`
+
+### Columns
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `paydate` | `date` |  |
+| `payamt` | `numeric` |  |
+| `paytype` | `USER-DEFINED` |  |
+| `partner_id` | `uuid` |  |
+| `paymemo` | `text` | Nullable |
+| `created_at` | `timestamp with time zone` | Nullable |
+| `updated_at` | `timestamp with time zone` | Nullable |
 
 ## Table `purchase_invoice`
 
@@ -166,13 +182,13 @@ description: all tables in schama with it's type and constraints
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `invoice_no` | `varchar` |  Unique |
-| `invoice_date` | `timestamptz` |  |
+| `invoice_no` | `character varying` | Unique |
+| `invoice_date` | `timestamp with time zone` |  |
 | `supplier_id` | `uuid` |  |
-| `supplier_inv_no` | `varchar` |  Nullable |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `supplier_inv_no` | `character varying` | Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `purchase_invoice_item`
 
@@ -183,14 +199,14 @@ description: all tables in schama with it's type and constraints
 | `id` | `uuid` | Primary |
 | `purchase_invoice_id` | `uuid` |  |
 | `item_id` | `uuid` |  |
-| `packaging_id` | `uuid` |  Nullable |
+| `packaging_id` | `uuid` | Nullable |
 | `quantity` | `numeric` |  |
 | `item_cost` | `numeric` |  |
-| `repack_factor` | `float8` |  |
-| `description` | `text` |  Nullable |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `repack_factor` | `double precision` |  |
+| `description` | `text` | Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `return`
 
@@ -199,13 +215,13 @@ description: all tables in schama with it's type and constraints
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `return_type` | `varchar` |  |
+| `return_type` | `character varying` |  |
 | `ref_invoice_id` | `uuid` |  |
-| `reason` | `text` |  Nullable |
-| `return_date` | `timestamptz` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `reason` | `text` | Nullable |
+| `return_date` | `timestamp with time zone` |  |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `return_item`
 
@@ -218,9 +234,10 @@ description: all tables in schama with it's type and constraints
 | `item_id` | `uuid` |  |
 | `quantity` | `numeric` |  |
 | `cost_price` | `numeric` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
+| `packaging_id` | `uuid` | Nullable |
 
 ## Table `sales_invoice`
 
@@ -229,14 +246,14 @@ description: all tables in schama with it's type and constraints
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `sales_order_id` | `uuid` |  Unique |
-| `invoice_no` | `varchar` |  Unique |
-| `invoice_date` | `timestamptz` |  |
+| `sales_order_id` | `uuid` | Unique |
+| `invoice_no` | `character varying` | Unique |
+| `invoice_date` | `timestamp with time zone` |  |
 | `total_amount` | `numeric` |  |
-| `is_cancelled` | `bool` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `is_cancelled` | `boolean` |  |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `sales_order`
 
@@ -245,15 +262,15 @@ description: all tables in schama with it's type and constraints
 | Name | Type | Constraints |
 |------|------|-------------|
 | `id` | `uuid` | Primary |
-| `order_date` | `timestamptz` |  |
+| `order_date` | `timestamp with time zone` |  |
 | `client_id` | `uuid` |  |
 | `customer_id` | `uuid` |  |
-| `site` | `text` |  Nullable |
+| `site` | `text` | Nullable |
 | `status` | `text` |  |
-| `description` | `text` |  Nullable |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
+| `description` | `text` | Nullable |
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable |
 
 ## Table `sales_order_item`
 
@@ -264,11 +281,10 @@ description: all tables in schama with it's type and constraints
 | `id` | `uuid` | Primary |
 | `sales_order_id` | `uuid` |  |
 | `item_id` | `uuid` |  |
-| `packaging_id` | `uuid` |  Nullable |
+| `packaging_id` | `uuid` | Nullable |
 | `quantity` | `numeric` |  |
 | `item_cost` | `numeric` |  |
 | `item_price` | `numeric` |  |
-| `created_at` | `timestamptz` |  |
-| `updated_at` | `timestamptz` |  |
-| `deleted_at` | `timestamptz` |  Nullable |
-
+| `created_at` | `timestamp with time zone` |  |
+| `updated_at` | `timestamp with time zone` |  |
+| `deleted_at` | `timestamp with time zone` | Nullable | |

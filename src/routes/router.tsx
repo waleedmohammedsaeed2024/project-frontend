@@ -14,6 +14,7 @@ import InventoryPage from '@/features/inventory/InventoryPage'
 import ReturnsPage from '@/features/returns/ReturnsPage'
 import AdjustmentsPage from '@/features/adjustments/AdjustmentsPage'
 import ReportsPage from '@/features/reports/ReportsPage'
+import PaymentsPage from '@/features/payments/PaymentsPage'
 import NotFoundPage from '@/features/misc/NotFoundPage'
 
 // Check if Supabase is configured
@@ -45,6 +46,7 @@ export const router = createBrowserRouter(
                 { path: '/inventory', element: <InventoryPage /> },
                 { path: '/returns', element: <ReturnsPage /> },
                 { path: '/adjustments', element: <AdjustmentsPage /> },
+                { path: '/payments', element: <PaymentsPage /> },
                 { path: '/reports', element: <ReportsPage /> },
                 { path: '*', element: <NotFoundPage /> },
               ],

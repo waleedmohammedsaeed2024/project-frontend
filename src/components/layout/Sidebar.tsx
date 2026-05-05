@@ -16,6 +16,7 @@ import {
   ReceiptText,
   ArrowLeftRight,
   Sliders,
+  Wallet,
 } from 'lucide-react'
 import { useAuth, useCanDo } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
@@ -53,6 +54,7 @@ export default function Sidebar() {
         { to: '/sales-orders', icon: ShoppingCart, label: 'طلبات البيع' },
         { to: '/delivery-notes', icon: Truck, label: 'التوصيل', guard: can.confirmDelivery },
         { to: '/sales-invoices', icon: ReceiptText, label: 'فواتير البيع' },
+        { to: '/payments', icon: Wallet, label: 'المدفوعات' },
       ],
     },
     {

@@ -8,6 +8,19 @@ export type OperationType = 'pur' | 'sal' | 'adj' | 'ren'
 export type ReturnType = 'sales' | 'purchase'
 export type AuditAction = 'INSERT' | 'UPDATE' | 'DELETE'
 export type NotificationStatus = 'pending' | 'sent' | 'failed'
+export type PaymentType = 'credit' | 'cash' | 'transfer'
+
+export interface Payment {
+  id: string
+  paydate: string
+  payamt: number
+  paytype: PaymentType
+  partner_id: string
+  paymemo: string | null
+  created_at: string | null
+  updated_at: string | null
+  partner?: Pick<Partner, 'id' | 'partner_name'>
+}
 
 export interface Partner {
   id: string
@@ -276,6 +289,7 @@ export interface Database {
       adjustment_item: TableDef<AdjustmentItem>
       audit_log: TableDef<AuditLog>
       notification_log: TableDef<NotificationLog>
+      payments: TableDef<Payment>
     }
     Views: Record<string, never>
     Functions: Record<string, never>
