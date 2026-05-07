@@ -14,6 +14,7 @@ export function useRecordPayment() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.payments() })
       qc.invalidateQueries({ queryKey: queryKeys.partners('c') })
+      qc.invalidateQueries({ queryKey: queryKeys.partners('s') })
       qc.invalidateQueries({ queryKey: queryKeys.clientBalances() })
     },
   })

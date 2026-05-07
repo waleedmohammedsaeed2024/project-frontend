@@ -17,6 +17,7 @@ import {
   ArrowLeftRight,
   Sliders,
   Wallet,
+  ShieldCheck,
 } from 'lucide-react'
 import { useAuth, useCanDo } from '@/context/AuthContext'
 import { cn } from '@/lib/utils'
@@ -35,7 +36,7 @@ interface NavItem {
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
-  const { signOut, role } = useAuth()
+  const { signOut } = useAuth()
   const can = useCanDo()
   const navigate = useNavigate()
 
@@ -49,28 +50,29 @@ export default function Sidebar() {
     {
       label: 'المبيعات',
       items: [
-        { to: '/partners/clients', icon: Users, label: 'الوكلاء', guard: true },
-        { to: '/partners/customers', icon: Users, label: 'العملاء', guard: true },
-        { to: '/sales-orders', icon: ShoppingCart, label: 'طلبات البيع' },
-        { to: '/delivery-notes', icon: Truck, label: 'التوصيل', guard: can.confirmDelivery },
-        { to: '/sales-invoices', icon: ReceiptText, label: 'فواتير البيع' },
-        { to: '/payments', icon: Wallet, label: 'المدفوعات' },
+        { to: '/partners/clients',   icon: Users,       label: 'الوكلاء',     guard: can.viewPartners },
+        { to: '/partners/customers', icon: Users,       label: 'العملاء',     guard: can.viewPartners },
+        { to: '/sales-orders',       icon: ShoppingCart,label: 'طلبات البيع' },
+        { to: '/delivery-notes',     icon: Truck,       label: 'التوصيل',     guard: can.confirmDelivery },
+        { to: '/sales-invoices',     icon: ReceiptText, label: 'فواتير البيع', guard: can.viewPartners },
+        { to: '/payments',           icon: Wallet,      label: 'المدفوعات',   guard: can.viewPayments },
       ],
     },
     {
       label: 'المشتريات',
       items: [
-        { to: '/partners/suppliers', icon: Users, label: 'الموردون' },
-        { to: '/purchase-invoices', icon: FileText, label: 'فواتير الشراء', guard: can.createPurchase },
-        { to: '/inventory', icon: Boxes, label: 'المخزون' },
-        { to: '/items', icon: Package, label: 'الأصناف والتعبئة', guard: can.manageItemsPackaging },
+        { to: '/partners/suppliers', icon: Users,    label: 'الموردون',          guard: can.viewPartners },
+        { to: '/purchase-invoices',  icon: FileText, label: 'فواتير الشراء',     guard: can.viewPurchase },
+        { to: '/supplier-payments',  icon: Wallet,   label: 'مدفوعات الموردين', guard: can.viewPayments },
+        { to: '/inventory',          icon: Boxes,    label: 'المخزون',          guard: can.viewInventory },
+        { to: '/items',              icon: Package,  label: 'الأصناف والتعبئة', guard: can.viewItems },
       ],
     },
     {
       label: 'العمليات',
       items: [
-        { to: '/returns', icon: ArrowLeftRight, label: 'المرتجعات', guard: can.manageReturns },
-        { to: '/adjustments', icon: Sliders, label: 'التسويات', guard: can.adjustInventory },
+        { to: '/returns',     icon: ArrowLeftRight, label: 'المرتجعات', guard: can.manageReturns },
+        { to: '/adjustments', icon: Sliders,        label: 'التسويات',  guard: can.adjustInventory },
       ],
     },
     {
@@ -82,7 +84,8 @@ export default function Sidebar() {
     {
       label: 'الإدارة',
       items: [
-        { to: '/admin/users', icon: Settings, label: 'المستخدمون', guard: can.manageUsers },
+        { to: '/admin/users', icon: Settings,    label: 'المستخدمون', guard: can.manageUsers },
+        { to: '/admin/roles', icon: ShieldCheck, label: 'الأدوار',     guard: can.manageRoles },
       ],
     },
   ]

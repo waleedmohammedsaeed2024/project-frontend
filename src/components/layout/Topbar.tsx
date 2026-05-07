@@ -5,7 +5,7 @@ interface TopbarProps {
   sidebarCollapsed?: boolean
 }
 
-export default function Topbar({ sidebarCollapsed }: TopbarProps) {
+export default function Topbar({ sidebarCollapsed: _ }: TopbarProps) {
   const { user, role } = useAuth()
 
   const roleLabel: Record<string, string> = {

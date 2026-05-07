@@ -47,6 +47,33 @@ coverage/
 # AI Tools Cache
 .qodo/
 .agent/
+.claude/skills/
+.claude/local/
+.claude/cache/
+.claude/settings.local.json
+.claude/projects/
 
 # Conversation logs
 conversations/
+
+# OS / misc
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.bak
+*.tmp
+*.orig
+
+# Local migrations / drift artefacts
+supabase/.temp/
+supabase/migrations/*.bak
+
+# Lock-file backups (keep package-lock.json itself committed)
+package-lock.json.bak
+yarn.lock.bak
+
+# Build artefacts not covered above
+*.tgz
+.eslintcache
+.stylelintcache

@@ -1,9 +1,44 @@
 import { useMemo, useState } from 'react'
 import { Plus, Wallet, CreditCard, Banknote, ArrowRightLeft, Search, X, Calendar, User2 } from 'lucide-react'
-import { useClients } from '@/features/partners/partners.hooks'
+import { useClients, useSuppliers } from '@/features/partners/partners.hooks'
 import { usePayments, useRecordPayment } from './payments.hooks'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import type { PaymentType } from '@/lib/database.types'
+
+export type PaymentPartnerType = 'c' | 's'
+
+interface Props {
+  partnerType?: PaymentPartnerType
+}
+
+const COPY: Record<PaymentPartnerType, {
+  pageTitle: string
+  pageSubtitle: string
+  partnerLabel: string
+  partnerSelectPlaceholder: string
+  searchPlaceholder: string
+  modalTitle: string
+  emptyError: string
+}> = {
+  c: {
+    pageTitle: 'مدفوعات العملاء',
+    pageSubtitle: 'تسجيل دفعات العملاء وتحديث الأرصدة',
+    partnerLabel: 'العميل *',
+    partnerSelectPlaceholder: '— اختر العميل —',
+    searchPlaceholder: 'بحث باسم العميل أو الملاحظات…',
+    modalTitle: 'تسجيل دفعة جديدة من عميل',
+    emptyError: 'يرجى اختيار العميل',
+  },
+  s: {
+    pageTitle: 'مدفوعات الموردين',
+    pageSubtitle: 'تسجيل الدفعات إلى الموردين وتحديث الأرصدة',
+    partnerLabel: 'المورد *',
+    partnerSelectPlaceholder: '— اختر المورد —',
+    searchPlaceholder: 'بحث باسم المورد أو الملاحظات…',
+    modalTitle: 'تسجيل دفعة جديدة لمورد',
+    emptyError: 'يرجى اختيار المورد',
+  },
+}
 
 interface FormState {
   partner_id: string
@@ -33,9 +68,12 @@ function emptyForm(): FormState {
   return { partner_id: '', payamt: '', paytype: 'cash', paydate: todayISO(), paymemo: '' }
 }
 
-export default function PaymentsPage() {
+export default function PaymentsPage({ partnerType = 'c' }: Props) {
+  const copy = COPY[partnerType]
   const { data: payments = [], isLoading } = usePayments()
-  const { data: clients = [] } = useClients()
+  const clientsQ = useClients()
+  const suppliersQ = useSuppliers()
+  const partners = (partnerType === 'c' ? clientsQ.data : suppliersQ.data) ?? []
   const recordMutation = useRecordPayment()
 
   const [search, setSearch] = useState('')
@@ -44,21 +82,26 @@ export default function PaymentsPage() {
   const [form, setForm] = useState<FormState>(emptyForm)
   const [formError, setFormError] = useState<string | null>(null)
 
+  const partnerIdSet = useMemo(() => new Set(partners.map(p => p.id)), [partners])
+  const scoped = useMemo(
+    () => payments.filter(p => partnerIdSet.has(p.partner_id)),
+    [payments, partnerIdSet],
+  )
   const stats = useMemo(() => {
-    const total = payments.reduce((s, p) => s + Number(p.payamt || 0), 0)
+    const total = scoped.reduce((s, p) => s + Number(p.payamt || 0), 0)
     const today = todayISO()
-    const todayTotal = payments
+    const todayTotal = scoped
       .filter(p => p.paydate === today)
       .reduce((s, p) => s + Number(p.payamt || 0), 0)
-    return { total, todayTotal, count: payments.length }
-  }, [payments])
+    return { total, todayTotal, count: scoped.length }
+  }, [scoped])
 
-  const selectedClient = clients.find(c => c.id === form.partner_id)
-  const balanceAfter = selectedClient
-    ? Number(selectedClient.balance || 0) - (parseFloat(form.payamt) || 0)
+  const selectedPartner = partners.find(c => c.id === form.partner_id)
+  const balanceAfter = selectedPartner
+    ? Number(selectedPartner.balance || 0) - (parseFloat(form.payamt) || 0)
     : null
 
-  const filtered = payments.filter(p => {
+  const filtered = scoped.filter(p => {
     if (filterType && p.paytype !== filterType) return false
     if (!search) return true
     const q = search.toLowerCase()
@@ -78,7 +121,7 @@ export default function PaymentsPage() {
     e.preventDefault()
     setFormError(null)
     const amt = parseFloat(form.payamt)
-    if (!form.partner_id) return setFormError('يرجى اختيار العميل')
+    if (!form.partner_id) return setFormError(copy.emptyError)
     if (!amt || amt <= 0) return setFormError('قيمة الدفعة يجب أن تكون أكبر من صفر')
     try {
       await recordMutation.mutateAsync({
@@ -100,8 +143,8 @@ export default function PaymentsPage() {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">المدفوعات</h1>
-          <p className="page-subtitle">تسجيل دفعات العملاء وتحديث الأرصدة</p>
+          <h1 className="page-title">{copy.pageTitle}</h1>
+          <p className="page-subtitle">{copy.pageSubtitle}</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>
           <Plus size={16} /> دفعة جديدة
@@ -143,7 +186,7 @@ export default function PaymentsPage() {
           <input
             className="form-input"
             style={{ paddingInlineStart: 36 }}
-            placeholder="بحث باسم العميل أو الملاحظات…"
+            placeholder={copy.searchPlaceholder}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -164,7 +207,7 @@ export default function PaymentsPage() {
           <thead>
             <tr>
               <th>التاريخ</th>
-              <th>العميل</th>
+              <th>{partnerType === 'c' ? 'العميل' : 'المورد'}</th>
               <th>طريقة الدفع</th>
               <th>الملاحظات</th>
               <th style={{ textAlign: 'end' }}>المبلغ</th>
@@ -216,22 +259,22 @@ export default function PaymentsPage() {
                 }}>
                   <Wallet size={18} />
                 </div>
-                <h2 className="modal-title" style={{ margin: 0 }}>تسجيل دفعة جديدة</h2>
+                <h2 className="modal-title" style={{ margin: 0 }}>{copy.modalTitle}</h2>
               </div>
               <button className="btn btn-ghost btn-icon" onClick={() => setShowModal(false)}><X size={16} /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
-                  <label className="form-label">العميل *</label>
+                  <label className="form-label">{copy.partnerLabel}</label>
                   <select
                     className="form-select"
                     required
                     value={form.partner_id}
                     onChange={e => setForm(f => ({ ...f, partner_id: e.target.value }))}
                   >
-                    <option value="">— اختر العميل —</option>
-                    {clients.map(c => (
+                    <option value="">{copy.partnerSelectPlaceholder}</option>
+                    {partners.map(c => (
                       <option key={c.id} value={c.id}>
                         {c.partner_name}  •  رصيد: {formatCurrency(Number(c.balance || 0))}
                       </option>
@@ -306,7 +349,7 @@ export default function PaymentsPage() {
                   />
                 </div>
 
-                {selectedClient && form.payamt && (
+                {selectedPartner && form.payamt && (
                   <div style={{
                     padding: 14,
                     borderRadius: 'var(--radius-md)',

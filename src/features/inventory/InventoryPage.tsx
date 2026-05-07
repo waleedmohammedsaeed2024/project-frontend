@@ -329,7 +329,16 @@ export default function InventoryPage() {
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
                       {itemForm.packaging_ids.map(id => {
                         const p = packaging.find(x => x.id === id)
-                        return p ? <span key={id} style={PKG_BADGE}>{p.pack_eng} / {p.pack_arab}</span> : null
+                        return p ? (
+                          <span key={id} style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: 999,
+                            fontSize: 11,
+                            background: 'oklch(0.93 0.05 240 / 0.5)',
+                            color: 'oklch(0.40 0.16 240)',
+                          }}>{p.pack_eng} / {p.pack_arab}</span>
+                        ) : null
                       })}
                     </div>
                   )}

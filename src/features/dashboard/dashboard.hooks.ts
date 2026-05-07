@@ -1,10 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
-import { queryKeys } from '@/lib/query-keys'
-import { fetchDashboardData } from './dashboard.service'
+import { fetchDashboardData, type DashboardFilter } from './dashboard.service'
 
-export function useDashboardData() {
+export function useDashboardData(filter: DashboardFilter) {
   return useQuery({
-    queryKey: queryKeys.dashboardStats(),
-    queryFn: fetchDashboardData,
+    queryKey: ['dashboard', filter],
+    queryFn: () => fetchDashboardData(filter),
   })
 }

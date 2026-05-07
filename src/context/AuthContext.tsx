@@ -6,9 +6,22 @@ import {
   type ReactNode,
 } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
-export type AppRole = 'admin' | 'purchase_manager' | 'salesman' | 'manager'
+// Built-in roles. Custom roles created via /admin/roles are also allowed (any string).
+export type AppRole = string
+
+export type Privilege =
+  | 'createOrders' | 'shipOrders' | 'confirmDelivery' | 'cancelInvoice' | 'salesmanShipToDelivered'
+  | 'createPurchase' | 'viewPurchase'
+  | 'adjustInventory' | 'manageReturns' | 'manageItemsPackaging' | 'viewInventory' | 'viewItems'
+  | 'managePartners' | 'viewPartners'
+  | 'recordPayments' | 'viewPayments'
+  | 'viewReports'
+  | 'manageUsers' | 'manageRoles'
+
+export type Privileges = Partial<Record<Privilege, boolean>>
 
 interface AuthContextValue {
   user: User | null
@@ -29,14 +42,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const role = (session?.user?.app_metadata?.role as AppRole) ?? null
 
   useEffect(() => {
-    // Initial session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setUser(data.session?.user ?? null)
       setLoading(false)
     })
 
-    // Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
       setSession(sess)
       setUser(sess?.user ?? null)
@@ -68,19 +79,64 @@ export function useAuth() {
   return ctx
 }
 
-// Permission checks per plan.md §11.2
-export function useCanDo() {
-  const { role } = useAuth()
+// Hardcoded fallback matrix, used when the DB privileges row is unavailable
+// (e.g. migration not yet applied, or for a custom role that hasn't loaded).
+function fallbackPrivileges(role: AppRole | null): Privileges {
+  const isAdmin       = role === 'admin'
+  const isAccountant  = role === 'accountant'
+  const isManager     = role === 'manager'
+  const isPurchase    = role === 'purchase_manager'
+  const isSalesman    = role === 'salesman'
   return {
-    createOrders:        role === 'admin' || role === 'purchase_manager',
-    shipOrders:          role === 'admin' || role === 'purchase_manager',
-    confirmDelivery:     role === 'admin' || role === 'purchase_manager' || role === 'salesman',
-    createPurchase:      role === 'admin' || role === 'purchase_manager',
-    adjustInventory:     role === 'admin' || role === 'purchase_manager',
-    manageReturns:       role === 'admin' || role === 'purchase_manager',
-    manageItemsPackaging:role === 'admin',
-    manageUsers:         role === 'admin',
-    viewReports:         role === 'admin' || role === 'purchase_manager' || role === 'manager',
-    cancelInvoice:       role === 'admin',
+    createOrders:         isAdmin || isAccountant || isPurchase,
+    shipOrders:           isAdmin || isAccountant || isPurchase,
+    confirmDelivery:      isAdmin || isAccountant || isPurchase,
+    salesmanShipToDelivered: isSalesman,
+    cancelInvoice:        isAdmin || isAccountant,
+    createPurchase:       isAdmin || isAccountant || isPurchase,
+    viewPurchase:         isAdmin || isAccountant || isPurchase || isManager,
+    adjustInventory:      isAdmin || isAccountant || isPurchase,
+    manageReturns:        isAdmin || isAccountant || isPurchase,
+    manageItemsPackaging: isAdmin || isAccountant,
+    viewInventory:        isAdmin || isAccountant || isPurchase || isManager,
+    viewItems:            isAdmin || isAccountant || isPurchase || isManager,
+    managePartners:       isAdmin || isAccountant || isPurchase,
+    viewPartners:         isAdmin || isAccountant || isPurchase || isManager,
+    recordPayments:       isAdmin || isAccountant,
+    viewPayments:         isAdmin || isAccountant || isManager,
+    viewReports:          isAdmin || isAccountant || isPurchase || isManager,
+    manageUsers:          isAdmin,
+    manageRoles:          isAdmin,
   }
+}
+
+// Loads the current user's privilege map from the DB (driven by /admin/roles).
+// Falls back to the hardcoded matrix while loading or if the RPC is unavailable.
+export function usePrivileges(): Privileges {
+  const { role, user } = useAuth()
+  const { data } = useQuery({
+    queryKey: ['my-privileges', role, user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('my_privileges')
+      if (error) throw error
+      return (data ?? {}) as Privileges
+    },
+    staleTime: 60_000,
+  })
+  // If DB returned an empty object (custom role with no flags set), still merge
+  // the fallback for built-ins so the app doesn't lock the admin out mid-migration.
+  const fallback = fallbackPrivileges(role)
+  return { ...fallback, ...(data ?? {}) }
+}
+
+// Backward-compatible permission accessor used across the app.
+export function useCanDo() {
+  const p = usePrivileges()
+  // Coerce undefined → false so callers can `if (can.foo)` safely.
+  return new Proxy(p, {
+    get(target, key: string) {
+      return target[key as Privilege] === true
+    },
+  }) as Record<Privilege, boolean>
 }
