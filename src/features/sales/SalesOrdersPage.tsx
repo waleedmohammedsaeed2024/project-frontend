@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { usePagination, PaginationFooter } from '@/components/Pagination'
 import { Plus, Eye, XCircle, Search, Printer, CheckCircle2, Phone, MapPin, FileText, Trash2, Save } from 'lucide-react'
-import { formatDate, formatCurrency, ORDER_STATUS_CLASS, ORDER_STATUS_LABEL } from '@/lib/utils'
+import { formatDate, formatCurrency, calcItemPrice, ORDER_STATUS_CLASS, ORDER_STATUS_LABEL } from '@/lib/utils'
 import { printOrderPDF } from '@/lib/printOrderPDF'
 import type { OrderStatus } from '@/lib/database.types'
 import {
@@ -12,6 +12,7 @@ import { useConfirmOrderDelivery } from '@/features/delivery/delivery.hooks'
 import { fetchSalesOrderById } from './sales.service'
 import { useItems } from '@/features/items/items.hooks'
 import { useClients, useCustomersByClient } from '@/features/partners/partners.hooks'
+import { useCanDo } from '@/context/AuthContext'
 
 const STATUS_FILTERS = [
   { label: 'الكل', value: '' },
@@ -120,6 +121,7 @@ export default function SalesOrdersPage() {
   const deleteLineMutation = useDeleteSalesOrderLine()
   const addLineMutation = useAddSalesOrderLine()
   const confirmDeliveryMutation = useConfirmOrderDelivery()
+  const can = useCanDo()
 
   const q = search.trim().toLowerCase()
   const filteredOrders = q ? orders.filter(o => {
@@ -139,7 +141,18 @@ export default function SalesOrdersPage() {
   const [showModal, setShowModal] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [form, setForm] = useState({ client_id: '', customer_id: '', site: '' })
+  const [isTaxable, setIsTaxable] = useState(false)
   const [lines, setLines] = useState<LineItem[]>([{ item_id: '', packaging_id: '', quantity: '' }])
+
+  // Live totals for the create-modal preview (subtotal + 15% VAT if taxable)
+  const draftSubtotal = lines.reduce((sum, l) => {
+    const qty = parseFloat(l.quantity)
+    const item = items.find(it => it.id === l.item_id)
+    if (!item || !Number.isFinite(qty) || qty <= 0) return sum
+    return sum + qty * calcItemPrice(item.avg_cost)
+  }, 0)
+  const draftTax = isTaxable ? draftSubtotal * 0.15 : 0
+  const draftTotal = draftSubtotal + draftTax
   const { data: customers = [] } = useCustomersByClient(form.client_id)
 
   // Detail dialog
@@ -210,6 +223,8 @@ export default function SalesOrdersPage() {
         client_id: form.client_id,
         customer_id: form.customer_id,
         site: form.site || null,
+        // Tag taxability inside description until a schema column is added.
+        description: isTaxable ? '[TAX:15]' : null,
         lines: lines.filter(l => l.item_id && l.quantity).map(l => ({
           item_id: l.item_id,
           packaging_id: l.packaging_id || null,
@@ -219,6 +234,7 @@ export default function SalesOrdersPage() {
       })
       setShowModal(false)
       setForm({ client_id: '', customer_id: '', site: '' })
+      setIsTaxable(false)
       setLines([{ item_id: '', packaging_id: '', quantity: '' }])
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'حدث خطأ')
@@ -258,9 +274,11 @@ export default function SalesOrdersPage() {
           <h1 className="page-title">طلبات البيع</h1>
           <p className="page-subtitle">إنشاء وإدارة طلبات البيع</p>
         </div>
-        <button className="btn btn-primary" onClick={() => { setCreateError(null); setShowModal(true) }} id="order-create-btn">
-          <Plus size={16} /> طلب جديد
-        </button>
+        {can.createOrders && (
+          <button className="btn btn-primary" onClick={() => { setCreateError(null); setShowModal(true) }} id="order-create-btn">
+            <Plus size={16} /> طلب جديد
+          </button>
+        )}
       </div>
 
       {/* Status filter tabs + search */}
@@ -326,7 +344,7 @@ export default function SalesOrdersPage() {
                       ><Eye size={14} /></button>
 
                       {/* Confirm delivery — قيد التوصيل only */}
-                      {o.status === 'p' && (
+                      {o.status === 'p' && can.editSalesOrder && (
                         <button
                           className="btn btn-primary btn-sm btn-icon"
                           title="تأكيد التسليم وإنشاء الفاتورة"
@@ -338,7 +356,7 @@ export default function SalesOrdersPage() {
                       )}
 
                       {/* Cancel — الطلبات only */}
-                      {o.status === 'o' && (
+                      {o.status === 'o' && can.editSalesOrder && (
                         <button
                           className="btn btn-danger btn-sm btn-icon"
                           title="إلغاء الطلب"
@@ -347,7 +365,7 @@ export default function SalesOrdersPage() {
                       )}
 
                       {/* Remove (soft-delete) — الطلبات only */}
-                      {o.status === 'o' && (
+                      {o.status === 'o' && can.editSalesOrder && (
                         <button
                           className="btn btn-danger btn-sm btn-icon"
                           title="حذف الطلب"
@@ -360,19 +378,17 @@ export default function SalesOrdersPage() {
                         ><Trash2 size={14} /></button>
                       )}
 
-                      {/* Print PDF — تم التسليم only */}
-                      {o.status === 'c' && (
-                        <button
-                          className="btn btn-ghost btn-sm btn-icon"
-                          title="طباعة PDF"
-                          disabled={printingId === o.id}
-                          onClick={() => handlePrint(o.id)}
-                        >
-                          {printingId === o.id
-                            ? <span style={{ fontSize: 10 }}>…</span>
-                            : <Printer size={14} />}
-                        </button>
-                      )}
+                      {/* Print PDF — available for all non-deleted statuses */}
+                      <button
+                        className="btn btn-ghost btn-sm btn-icon"
+                        title="طباعة PDF"
+                        disabled={printingId === o.id}
+                        onClick={() => handlePrint(o.id)}
+                      >
+                        {printingId === o.id
+                          ? <span style={{ fontSize: 10 }}>…</span>
+                          : <Printer size={14} />}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -469,12 +485,12 @@ export default function SalesOrdersPage() {
                                 <th style={{ textAlign: 'end' }}>التكلفة</th>
                                 <th style={{ textAlign: 'end' }}>السعر</th>
                                 <th style={{ textAlign: 'end' }}>الإجمالي</th>
-                                {detailOrder.status === 'o' && <th style={{ textAlign: 'end', width: 90 }}>إجراءات</th>}
+                                {detailOrder.status === 'o' && can.editSalesOrder && <th style={{ textAlign: 'end', width: 90 }}>إجراءات</th>}
                               </tr>
                             </thead>
                             <tbody>
                               {lineItems.map((line, idx) => {
-                                const editable = detailOrder.status === 'o'
+                                const editable = detailOrder.status === 'o' && can.editSalesOrder
                                 const lineId = line.id ?? ''
                                 const editedRaw = lineEdits[lineId]
                                 const isEdited = editedRaw != null && editedRaw !== String(line.quantity)
@@ -505,10 +521,10 @@ export default function SalesOrdersPage() {
                                         />
                                       ) : line.quantity}
                                     </td>
-                                    <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(line.item_cost, 3)}</td>
-                                    <td style={{ textAlign: 'end' }}>{formatCurrency(line.item_price, 3)}</td>
+                                    <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(line.item_cost)}</td>
+                                    <td style={{ textAlign: 'end' }}>{formatCurrency(line.item_price)}</td>
                                     <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>
-                                      {formatCurrency(line.quantity * line.item_price, 3)}
+                                      {formatCurrency(line.quantity * line.item_price)}
                                     </td>
                                     {editable && (
                                       <td>
@@ -540,16 +556,16 @@ export default function SalesOrdersPage() {
                               <tr>
                                 <td colSpan={6} style={{ textAlign: 'end', fontWeight: 700, fontSize: 14, paddingInlineEnd: 12 }}>الإجمالي الكلي:</td>
                                 <td style={{ textAlign: 'end', fontWeight: 700, fontSize: 15, color: 'var(--color-primary)' }}>
-                                  {formatCurrency(grandTotal, 3)}
+                                  {formatCurrency(grandTotal)}
                                 </td>
-                                {detailOrder.status === 'o' && <td />}
+                                {detailOrder.status === 'o' && can.editSalesOrder && <td />}
                               </tr>
                             </tfoot>
                           </table>
                         </div>
                       )}
 
-                      {detailOrder.status === 'o' && (() => {
+                      {detailOrder.status === 'o' && can.editSalesOrder && (() => {
                         const draftItem = items.find(it => it.id === newLine.item_id)
                         const availablePkg = draftItem?.item_packaging ?? []
                         return (
@@ -608,7 +624,7 @@ export default function SalesOrdersPage() {
 
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setViewingId(null)}>إغلاق</button>
-              {detailOrder?.status === 'c' && (
+              {detailOrder && (
                 <button className="btn btn-primary" onClick={handlePrintDetail}>
                   <Printer size={14} /> طباعة PDF
                 </button>
@@ -655,6 +671,38 @@ export default function SalesOrdersPage() {
                   </div>
                 </div>
 
+                {/* Taxable toggle — adds 15% VAT to the order total */}
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 14px',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  background: isTaxable ? 'oklch(0.95 0.07 145 / 0.4)' : 'oklch(0.97 0.01 240 / 0.4)',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={isTaxable}
+                    onChange={e => setIsTaxable(e.target.checked)}
+                    style={{ width: 16, height: 16, cursor: 'pointer' }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>خاضع للضريبة (15%)</span>
+                    <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                      عند التفعيل، تُضاف ضريبة 15% إلى إجمالي الفاتورة
+                    </span>
+                  </div>
+                  <span style={{
+                    fontSize: 12, fontWeight: 700,
+                    padding: '4px 10px', borderRadius: 999,
+                    background: isTaxable ? 'oklch(0.55 0.16 145)' : 'oklch(0.85 0.01 240)',
+                    color: isTaxable ? 'white' : 'var(--color-text-muted)',
+                  }}>
+                    {isTaxable ? 'ضريبة 15%' : 'بدون ضريبة'}
+                  </span>
+                </label>
+
                 {/* Line items */}
                 <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
                   <div style={{
@@ -698,7 +746,7 @@ export default function SalesOrdersPage() {
                             onChange={e => updateLine(i, 'quantity', e.target.value)}
                           />
                           <div style={{ fontSize: 12, color: 'var(--color-text-muted)', textAlign: 'end' }}>
-                            {item ? item.avg_cost.toFixed(3) : '—'}
+                            {item ? formatCurrency(item.avg_cost) : '—'}
                           </div>
                           <button type="button" className="btn btn-danger btn-icon btn-sm"
                             onClick={() => removeLine(i)} disabled={lines.length === 1}
@@ -714,6 +762,36 @@ export default function SalesOrdersPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Totals preview */}
+                {draftSubtotal > 0 && (
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr auto', gap: 4,
+                    padding: '12px 14px',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'oklch(0.97 0.01 240 / 0.6)',
+                    fontSize: 13,
+                  }}>
+                    <span style={{ color: 'var(--color-text-muted)' }}>المجموع الفرعي</span>
+                    <span style={{ textAlign: 'end', fontWeight: 500 }}>{formatCurrency(draftSubtotal)}</span>
+
+                    <span style={{ color: 'var(--color-text-muted)' }}>
+                      الضريبة ({isTaxable ? '15%' : '0%'})
+                    </span>
+                    <span style={{ textAlign: 'end', fontWeight: 500 }}>{formatCurrency(draftTax)}</span>
+
+                    <span style={{
+                      gridColumn: '1 / -1', borderTop: '1px dashed var(--color-border)',
+                      marginTop: 4, paddingTop: 4,
+                    }} />
+                    <span style={{ fontWeight: 700, color: 'var(--color-heading)' }}>الإجمالي</span>
+                    <span style={{
+                      textAlign: 'end', fontWeight: 700, fontSize: 15,
+                      color: 'var(--color-primary)',
+                    }}>{formatCurrency(draftTotal)}</span>
+                  </div>
+                )}
 
                 {createError && (
                   <div style={{ color: 'oklch(0.40 0.14 18)', fontSize: 13, padding: 10, background: 'oklch(0.95 0.04 20/0.3)', borderRadius: 'var(--radius-md)' }}>

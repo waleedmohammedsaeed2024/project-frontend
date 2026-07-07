@@ -36,6 +36,7 @@ export function useConfirmDelivery() {
       qc.invalidateQueries({ queryKey: queryKeys.items() })
       qc.invalidateQueries({ queryKey: queryKeys.inventory() })
       qc.invalidateQueries({ queryKey: queryKeys.partners('c') })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }
@@ -51,6 +52,7 @@ export function useConfirmOrderDelivery() {
       qc.invalidateQueries({ queryKey: queryKeys.items() })
       qc.invalidateQueries({ queryKey: queryKeys.inventory() })
       qc.invalidateQueries({ queryKey: queryKeys.partners('c') })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

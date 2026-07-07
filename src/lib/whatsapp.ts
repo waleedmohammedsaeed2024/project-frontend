@@ -63,7 +63,7 @@ export function formatSalesInvoiceMessage(
 
 العميل: ${clientName}
 رقم الفاتورة: ${invoiceNo}
-الإجمالي: ${totalAmount.toFixed(3)}
+الإجمالي: ${totalAmount.toFixed(2)}
 
 تم إصدار الفاتورة تلقائياً عند تأكيد التسليم`
 }

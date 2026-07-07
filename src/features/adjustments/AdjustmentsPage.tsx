@@ -184,7 +184,7 @@ export default function AdjustmentsPage() {
                                   }}>{isIncrease ? '+' : '−'}</span>
                                 </td>
                                 <td style={{ textAlign: 'end', fontWeight: 600 }}>{Math.abs(l.quantity)}</td>
-                                <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(l.cost_price, 3)}</td>
+                                <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(l.cost_price)}</td>
                               </tr>
                             )
                           })}

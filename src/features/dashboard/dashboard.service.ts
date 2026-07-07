@@ -31,7 +31,12 @@ export interface DashboardData {
 }
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10)
+  // Local date (YYYY-MM-DD), not UTC — avoids off-by-one near midnight in +TZ regions.
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 interface SalesSummaryRow {
@@ -48,7 +53,7 @@ export async function fetchDashboardData(filter: DashboardFilter): Promise<Dashb
   const todayStart = `${today}T00:00:00`
   const todayEnd = `${today}T23:59:59`
 
-  const [ordersRes, pendingRes, clientsRes, todayOrdersRes, lowRes, summaryRes, itemsRes] = await Promise.all([
+  const [ordersRes, pendingRes, clientsRes, todayOrdersRes, lowRes, summaryRes, itemsRes, todayInvoicesRes] = await Promise.all([
     supabase.from('sales_order').select('*', { count: 'exact', head: true }).is('deleted_at', null),
     supabase.from('sales_order').select('*', { count: 'exact', head: true }).eq('status', 'o').is('deleted_at', null),
     supabase
@@ -61,7 +66,7 @@ export async function fetchDashboardData(filter: DashboardFilter): Promise<Dashb
     (() => {
       let q = supabase
         .from('sales_order')
-        .select('*, client:partner!client_id(partner_name), customer:partner!customer_id(partner_name)')
+        .select('*, client:partner!client_id(partner_name), customer:partner!customer_id(partner_name), items:sales_order_item(quantity, item_price)')
         .is('deleted_at', null)
         .gte('order_date', todayStart)
         .lte('order_date', todayEnd)
@@ -77,6 +82,13 @@ export async function fetchDashboardData(filter: DashboardFilter): Promise<Dashb
       .is('deleted_at', null)
       .order('quantity', { ascending: false })
       .limit(8),
+    supabase
+      .from('sales_invoice')
+      .select('total_amount, is_cancelled')
+      .is('deleted_at', null)
+      .eq('is_cancelled', false)
+      .gte('invoice_date', todayStart)
+      .lte('invoice_date', todayEnd),
   ])
   assertNoError(summaryRes.error)
 
@@ -113,10 +125,29 @@ export async function fetchDashboardData(filter: DashboardFilter): Promise<Dashb
     .sort((a, b) => b.value - a.value)
     .slice(0, 8)
 
-  // Today sales total
-  const todaySalesTotal = summaryRows
-    .filter(r => r.invoice_date.slice(0, 10) === today)
-    .reduce((s, r) => s + Number(r.total_amount), 0)
+  // Today sales total — sum of invoices issued today (invoice is created on delivery).
+  // Falls back to today's non-cancelled sales orders for the case where a sale was
+  // placed today but not yet delivered/invoiced.
+  type TodayOrderRow = SalesOrder & {
+    status: string
+    items?: { quantity: number | string; item_price: number | string }[]
+  }
+  const todayOrderRows = (todayOrdersRes.data ?? []) as unknown as TodayOrderRow[]
+  const todayInvoiceRows = (todayInvoicesRes.data ?? []) as { total_amount: number | string }[]
+  const todayInvoiceTotal = todayInvoiceRows.reduce((s, r) => s + Number(r.total_amount), 0)
+  // Exclude 'c' (closed/invoiced — counted in invoices) and 'd' (cancelled).
+  const todayOrdersTotal = todayOrderRows
+    .filter(o => o.status === 'o' || o.status === 'p')
+    .reduce(
+      (sum, o) =>
+        sum +
+        (o.items ?? []).reduce(
+          (s, it) => s + Number(it.quantity) * Number(it.item_price),
+          0,
+        ),
+      0,
+    )
+  const todaySalesTotal = todayInvoiceTotal + todayOrdersTotal
 
   return {
     stats: {
