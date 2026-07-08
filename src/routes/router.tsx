@@ -19,6 +19,7 @@ import ItemInvoicesPage from '@/features/reports/ItemInvoicesPage'
 import UsersPage from '@/features/admin/UsersPage'
 import RolesPage from '@/features/admin/RolesPage'
 import NotFoundPage from '@/features/misc/NotFoundPage'
+import GuardedRoute from './GuardedRoute'
 
 // Check if Supabase is configured
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -37,24 +38,24 @@ export const router = createBrowserRouter(
             {
               element: <AppLayout />,
               children: [
-                { path: '/', element: <DashboardPage /> },
-                { path: '/partners/clients', element: <PartnersPage type="c" /> },
-                { path: '/partners/customers', element: <PartnersPage type="u" /> },
-                { path: '/partners/suppliers', element: <PartnersPage type="s" /> },
-                { path: '/items', element: <ItemsPage /> },
-                { path: '/purchase-invoices', element: <PurchaseInvoicesPage /> },
-                { path: '/sales-orders', element: <SalesOrdersPage /> },
-                { path: '/delivery-notes', element: <DeliveryNotesPage /> },
-                { path: '/sales-invoices', element: <SalesInvoicesPage /> },
-                { path: '/inventory', element: <InventoryPage /> },
-                { path: '/returns', element: <ReturnsPage /> },
-                { path: '/adjustments', element: <AdjustmentsPage /> },
-                { path: '/payments', element: <PaymentsPage partnerType="c" /> },
-                { path: '/supplier-payments', element: <PaymentsPage partnerType="s" /> },
-                { path: '/reports', element: <ReportsPage /> },
-                { path: '/reports/item/:itemId', element: <ItemInvoicesPage /> },
-                { path: '/admin/users', element: <UsersPage /> },
-                { path: '/admin/roles', element: <RolesPage /> },
+                { path: '/', element: <GuardedRoute privilege="viewDashboard"><DashboardPage /></GuardedRoute> },
+                { path: '/partners/clients',   element: <GuardedRoute privilege="viewPartners"><PartnersPage type="c" /></GuardedRoute> },
+                { path: '/partners/customers', element: <GuardedRoute privilege="viewPartners"><PartnersPage type="u" /></GuardedRoute> },
+                { path: '/partners/suppliers', element: <GuardedRoute privilege="viewPartners"><PartnersPage type="s" /></GuardedRoute> },
+                { path: '/items',              element: <GuardedRoute privilege="viewItems"><ItemsPage /></GuardedRoute> },
+                { path: '/purchase-invoices',  element: <GuardedRoute privilege="viewPurchase"><PurchaseInvoicesPage /></GuardedRoute> },
+                { path: '/sales-orders',       element: <SalesOrdersPage /> },
+                { path: '/delivery-notes',     element: <GuardedRoute privilege="confirmDelivery"><DeliveryNotesPage /></GuardedRoute> },
+                { path: '/sales-invoices',     element: <GuardedRoute privilege="viewPartners"><SalesInvoicesPage /></GuardedRoute> },
+                { path: '/inventory',          element: <GuardedRoute privilege="viewInventory"><InventoryPage /></GuardedRoute> },
+                { path: '/returns',            element: <GuardedRoute privilege="manageReturns"><ReturnsPage /></GuardedRoute> },
+                { path: '/adjustments',        element: <GuardedRoute privilege="adjustInventory"><AdjustmentsPage /></GuardedRoute> },
+                { path: '/payments',           element: <GuardedRoute privilege="viewPayments"><PaymentsPage partnerType="c" /></GuardedRoute> },
+                { path: '/supplier-payments',  element: <GuardedRoute privilege="viewPayments"><PaymentsPage partnerType="s" /></GuardedRoute> },
+                { path: '/reports',            element: <GuardedRoute privilege="viewReports"><ReportsPage /></GuardedRoute> },
+                { path: '/reports/item/:itemId', element: <GuardedRoute privilege="viewReports"><ItemInvoicesPage /></GuardedRoute> },
+                { path: '/admin/users',        element: <GuardedRoute privilege="manageUsers"><UsersPage /></GuardedRoute> },
+                { path: '/admin/roles',        element: <GuardedRoute privilege="manageRoles"><RolesPage /></GuardedRoute> },
                 { path: '*', element: <NotFoundPage /> },
               ],
             },

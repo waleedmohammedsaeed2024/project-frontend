@@ -54,3 +54,4 @@ This is a React 19 + TypeScript + Vite SPA backed by Supabase (PostgreSQL + Auth
 **React Compiler:** Enabled via `@rolldown/plugin-babel` + `babel-plugin-react-compiler` in `vite.config.ts`. Avoid manual `useMemo`/`useCallback` for cases the compiler handles; do not disable the compiler without reason.
 
 **Data Base schema:** connect to @skills/database-schema/SKILLS.md, you find API Key on env files
+

@@ -13,7 +13,8 @@ import { supabase } from '@/lib/supabase'
 export type AppRole = string
 
 export type Privilege =
-  | 'createOrders' | 'shipOrders' | 'confirmDelivery' | 'cancelInvoice' | 'salesmanShipToDelivered'
+  | 'viewDashboard'
+  | 'createOrders' | 'editSalesOrder' | 'shipOrders' | 'confirmDelivery' | 'cancelInvoice' | 'salesmanShipToDelivered'
   | 'createPurchase' | 'viewPurchase'
   | 'adjustInventory' | 'manageReturns' | 'manageItemsPackaging' | 'viewInventory' | 'viewItems'
   | 'managePartners' | 'viewPartners'
@@ -88,7 +89,9 @@ function fallbackPrivileges(role: AppRole | null): Privileges {
   const isPurchase    = role === 'purchase_manager'
   const isSalesman    = role === 'salesman'
   return {
-    createOrders:         isAdmin || isAccountant || isPurchase,
+    viewDashboard:        !isSalesman,
+    createOrders:         isAdmin || isAccountant,
+    editSalesOrder:       isAdmin || isAccountant || isPurchase,
     shipOrders:           isAdmin || isAccountant || isPurchase,
     confirmDelivery:      isAdmin || isAccountant || isPurchase,
     salesmanShipToDelivered: isSalesman,

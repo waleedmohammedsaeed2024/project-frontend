@@ -20,8 +20,18 @@ out/
 .env.*
 !.env.example
 
-# Secrets
+# Secrets & credentials — never commit these
 secrets.txt
+secrets.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*credentials*.json
+service-account*.json
+.env.local
+.env.*.local
 
 # Testing
 coverage/
@@ -47,6 +57,8 @@ coverage/
 # AI Tools Cache
 .qodo/
 .agent/
+.agents/
+skills-lock.json
 .claude/skills/
 .claude/local/
 .claude/cache/
@@ -55,6 +67,10 @@ coverage/
 
 # Conversation logs
 conversations/
+
+# Screenshots / scratch artefacts
+screen.png
+screenshot*.png
 
 # OS / misc
 Thumbs.db

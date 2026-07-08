@@ -25,6 +25,22 @@ serve(async (req) => {
       })
     }
 
+    // Require an authenticated (non-anon) caller. supabase.functions.invoke()
+    // forwards the user's JWT; reject anon-key-only calls so the Twilio account
+    // can't be driven by anyone holding the public anon key.
+    const authHeader = req.headers.get('Authorization') ?? ''
+    const token = authHeader.replace(/^Bearer\s+/i, '')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const authClient = createClient(supabaseUrl, serviceKey)
+    const { data: caller, error: callerErr } = await authClient.auth.getUser(token)
+    if (callerErr || !caller.user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
     // Check if WhatsApp is enabled
     if (!ENABLE_WHATSAPP) {
       console.log('WhatsApp notifications are disabled')
@@ -58,7 +74,7 @@ serve(async (req) => {
 
     // Send via Twilio API
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`
-    const authHeader = `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`
+    const twilioAuthHeader = `Basic ${btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)}`
 
     const formBody = new URLSearchParams({
       From: TWILIO_WHATSAPP_NUMBER!,
@@ -69,7 +85,7 @@ serve(async (req) => {
     const twilioRes = await fetch(twilioUrl, {
       method: 'POST',
       headers: {
-        'Authorization': authHeader,
+        'Authorization': twilioAuthHeader,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: formBody,
@@ -77,10 +93,8 @@ serve(async (req) => {
 
     const twilioData = await twilioRes.json()
 
-    // Log to notification_log table
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    // Log to notification_log table (reuse the service-role client from the auth check)
+    const supabase = authClient
 
     const logEntry = {
       partner_id: partner_id || null,

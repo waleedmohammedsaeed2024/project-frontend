@@ -44,7 +44,7 @@ export default function Sidebar() {
     {
       label: 'عام',
       items: [
-        { to: '/', icon: LayoutDashboard, label: 'الرئيسية' },
+        { to: '/', icon: LayoutDashboard, label: 'الرئيسية', guard: can.viewDashboard },
       ],
     },
     {

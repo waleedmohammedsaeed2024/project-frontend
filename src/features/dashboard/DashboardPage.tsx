@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
-  PieChart, Pie, Cell, Legend,
+  PieChart, Pie, Cell, Legend, LineChart, Line,
 } from 'recharts'
 import { formatCurrency, formatDateTime, ORDER_STATUS_LABEL, ORDER_STATUS_CLASS } from '@/lib/utils'
 import { useClients, useSuppliers } from '@/features/partners/partners.hooks'
@@ -132,7 +132,7 @@ export default function DashboardPage() {
             <Empty>لا توجد مبيعات في الفترة المحددة</Empty>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={salesSeries} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+              <LineChart data={salesSeries} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
                 <CartesianGrid stroke="oklch(0.92 0.005 240)" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
@@ -140,8 +140,15 @@ export default function DashboardPage() {
                   formatter={((v: unknown) => formatCurrency(Number(v))) as never}
                   contentStyle={{ borderRadius: 8, border: '1px solid var(--color-border)', fontSize: 12 }}
                 />
-                <Bar dataKey="sales" fill="oklch(0.55 0.18 265)" radius={[6, 6, 0, 0]} />
-              </BarChart>
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="oklch(0.55 0.18 265)"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, strokeWidth: 0, fill: 'oklch(0.55 0.18 265)' }}
+                  activeDot={{ r: 5 }}
+                />
+              </LineChart>
             </ResponsiveContainer>
           )}
         </div>

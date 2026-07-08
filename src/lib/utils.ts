@@ -1,10 +1,14 @@
 import type { OrderStatus, OperationType } from './database.types'
 
 // ---- Number format ----
+// Decimals are clamped to a max of 2: project-wide rule is "displayed numbers
+// always show exactly two decimal places, never more". `decimals` arg kept for
+// callers that want fewer (0 or 1) but anything higher is silently capped.
 export function formatCurrency(value: number, decimals = 2): string {
+  const d = Math.min(2, Math.max(0, decimals))
   return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
   }).format(value)
 }
 

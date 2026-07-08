@@ -307,8 +307,8 @@ export default function ReturnsPage() {
                                     : <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>—</span>}
                                 </td>
                                 <td style={{ textAlign: 'end' }}>{l.quantity}</td>
-                                <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(l.cost_price, 3)}</td>
-                                <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>{formatCurrency(l.quantity * l.cost_price, 3)}</td>
+                                <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(l.cost_price)}</td>
+                                <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>{formatCurrency(l.quantity * l.cost_price)}</td>
                               </tr>
                             )
                           })}
@@ -316,7 +316,7 @@ export default function ReturnsPage() {
                         <tfoot>
                           <tr>
                             <td colSpan={5} style={{ textAlign: 'end', fontWeight: 700, paddingInlineEnd: 12 }}>الإجمالي الكلي:</td>
-                            <td style={{ textAlign: 'end', fontWeight: 700, color: 'var(--color-primary)' }}>{formatCurrency(grandTotal, 3)}</td>
+                            <td style={{ textAlign: 'end', fontWeight: 700, color: 'var(--color-primary)' }}>{formatCurrency(grandTotal)}</td>
                           </tr>
                         </tfoot>
                       </table>
@@ -400,7 +400,7 @@ export default function ReturnsPage() {
                                     : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
                                 </td>
                                 <td style={{ textAlign: 'end', fontSize: 13 }}>{l.quantity}</td>
-                                <td style={{ textAlign: 'end', fontSize: 13, color: 'var(--color-text-muted)' }}>{l.cost_price.toFixed(3)}</td>
+                                <td style={{ textAlign: 'end', fontSize: 13, color: 'var(--color-text-muted)' }}>{formatCurrency(l.cost_price)}</td>
                                 <td style={{ textAlign: 'end' }}>
                                   <input
                                     type="number"

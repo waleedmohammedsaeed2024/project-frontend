@@ -196,7 +196,7 @@ function ItemCard({
                       {s.quantity}
                     </td>
                     <td style={{ textAlign: 'end', color: 'var(--color-primary)', fontWeight: 600 }}>
-                      {formatCurrency(s.avg_cost, 3)}
+                      {formatCurrency(s.avg_cost)}
                     </td>
                   </tr>
                 )

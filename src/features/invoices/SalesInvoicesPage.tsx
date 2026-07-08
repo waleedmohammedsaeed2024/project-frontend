@@ -168,20 +168,20 @@ export default function SalesInvoicesPage() {
                                   : <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>—</span>}
                               </td>
                               <td style={{ textAlign: 'end' }}>{l.quantity}</td>
-                              <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(l.item_cost, 3)}</td>
-                              <td style={{ textAlign: 'end' }}>{formatCurrency(l.item_price, 3)}</td>
-                              <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>{formatCurrency(l.quantity * l.item_price, 3)}</td>
+                              <td style={{ textAlign: 'end', fontSize: 12, color: 'var(--color-text-muted)' }}>{formatCurrency(l.item_cost)}</td>
+                              <td style={{ textAlign: 'end' }}>{formatCurrency(l.item_price)}</td>
+                              <td style={{ textAlign: 'end', fontWeight: 600, color: 'var(--color-primary)' }}>{formatCurrency(l.quantity * l.item_price)}</td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
                           <tr>
                             <td colSpan={6} style={{ textAlign: 'end', fontWeight: 700, paddingInlineEnd: 12 }}>الإجمالي الكلي:</td>
-                            <td style={{ textAlign: 'end', fontWeight: 700, color: 'var(--color-primary)' }}>{formatCurrency(grandTotal, 3)}</td>
+                            <td style={{ textAlign: 'end', fontWeight: 700, color: 'var(--color-primary)' }}>{formatCurrency(grandTotal)}</td>
                           </tr>
                           <tr>
                             <td colSpan={6} style={{ textAlign: 'end', fontWeight: 700, paddingInlineEnd: 12 }}>الإجمالي + ضريبة 15%:</td>
-                            <td style={{ textAlign: 'end', fontWeight: 700, color: 'oklch(0.55 0.15 145)' }}>{formatCurrency(viewing.total_amount * 1.15, 3)}</td>
+                            <td style={{ textAlign: 'end', fontWeight: 700, color: 'oklch(0.55 0.15 145)' }}>{formatCurrency(viewing.total_amount * 1.15)}</td>
                           </tr>
                         </tfoot>
                       </table>
